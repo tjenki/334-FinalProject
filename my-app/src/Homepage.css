@@ -1,38 +1,225 @@
-.Homepage {
-  text-align: center;
-}
-
-.Homepage-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .Homepage-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.Homepage-header {
-  background-color: #ffffff;
+.homepage {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  background: #f5f7fb;
+  color: #162033;
+}
+
+.skip-link {
+  background: #162033;
+  color: #ffffff;
+  font-weight: 700;
+  left: 1rem;
+  padding: 0.75rem 1rem;
+  position: absolute;
+  top: 1rem;
+  transform: translateY(-180%);
+  z-index: 10;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.hero {
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: rgb(255, 255, 255);
+  background: #ffffff;
+  border-bottom: 1px solid #d9e1ef;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
+  padding: 3rem clamp(1rem, 4vw, 4rem);
 }
 
-.Homepage-link {
-  color: #61dafb;
+.eyebrow,
+.section-heading p,
+.reminder-type {
+  color: #475c7a;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  margin: 0 0 0.35rem;
+  text-transform: uppercase;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.hero h1 {
+  font-size: clamp(2rem, 6vw, 4rem);
+  line-height: 1.05;
+  margin: 0;
+  max-width: 13ch;
+}
+
+.hero-text {
+  color: #40516a;
+  font-size: 1.2rem;
+  line-height: 1.6;
+  margin: 1rem 0 0;
+  max-width: 42rem;
+}
+
+.today-summary {
+  background: #f0f8f6;
+  border: 2px solid #217b6a;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.today-summary span {
+  color: #0f6958;
+  display: block;
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.today-summary p {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0.5rem 0 0;
+}
+
+.dashboard {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: 1.5rem clamp(1rem, 4vw, 4rem) 3rem;
+}
+
+.app-section {
+  background: #ffffff;
+  border: 1px solid #d9e1ef;
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.section-heading h2 {
+  font-size: 1.6rem;
+  margin: 0 0 1rem;
+}
+
+.reminder-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.reminder-card {
+  align-items: center;
+  background: #ffffff;
+  border: 2px solid #c6d2e3;
+  border-left: 8px solid #315fba;
+  border-radius: 8px;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 1rem;
+}
+
+.reminder-card.is-confirmed {
+  background: #f0f8f6;
+  border-color: #217b6a;
+}
+
+.reminder-card h3 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.reminder-card p {
+  line-height: 1.5;
+  margin: 0.35rem 0 0;
+}
+
+.reminder-time {
+  color: #0f6958;
+  font-weight: 800;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+input,
+select,
+textarea,
+.skip-link {
+  border-radius: 8px;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.skip-link:focus-visible {
+  outline: 4px solid #f4b942;
+  outline-offset: 3px;
+}
+
+.confirmation-button,
+.primary-button {
+  border: 0;
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 3rem;
+  padding: 0.8rem 1rem;
+}
+
+.confirmation-button {
+  background: #315fba;
+  color: #ffffff;
+  min-width: 9rem;
+}
+
+.is-confirmed .confirmation-button {
+  background: #217b6a;
+}
+
+.primary-button {
+  background: #162033;
+  color: #ffffff;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.add-reminder form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.add-reminder label {
+  font-weight: 800;
+}
+
+.add-reminder input,
+.add-reminder select,
+.add-reminder textarea {
+  border: 2px solid #a9b8cd;
+  color: #162033;
+  min-height: 3rem;
+  padding: 0.75rem;
+}
+
+.add-reminder textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+@media (max-width: 800px) {
+  .hero,
+  .dashboard,
+  .reminder-card {
+    grid-template-columns: 1fr;
   }
-  to {
-    transform: rotate(360deg);
+
+  .hero h1 {
+    max-width: 100%;
+  }
+
+  .confirmation-button {
+    width: 100%;
   }
 }
