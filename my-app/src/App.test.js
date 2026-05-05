@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import Homepage from './Homepage';
 
-test('renders learn react link', () => {
+test('renders the everyday tracker dashboard', () => {
   render(<Homepage />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  expect(screen.getByText(/Everyday Tracker/i)).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /Today's medicine/i })).toBeInTheDocument();
 });
