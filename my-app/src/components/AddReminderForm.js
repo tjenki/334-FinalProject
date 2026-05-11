@@ -1,5 +1,7 @@
 function AddReminderForm({ newReminder, onChange, onSubmit }) {
   return (
+
+    
     <section className="app-section add-reminder" aria-labelledby="add-reminder-heading">
       <div className="section-heading">
         <p>Add reminder</p>

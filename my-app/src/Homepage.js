@@ -4,49 +4,21 @@ import AddReminderForm from './components/AddReminderForm';
 import AppointmentReminders from './components/AppointmentReminders';
 import MedicationReminders from './components/MedicationReminders';
 import TaskReminders from './components/TaskReminders';
+import { Link } from 'react-router-dom';
+
 
 const initialReminders = {
   medications: [
-    {
-      id: 1,
-      name: 'Morning blood pressure pill',
-      time: '8:00 AM',
-      instructions: 'Take 1 pill with breakfast.',
-      confirmed: false,
-    },
-    {
-      id: 2,
-      name: 'Evening vitamins',
-      time: '7:00 PM',
-      instructions: 'Take after dinner with water.',
-      confirmed: true,
-    },
-  ],
-  appointments: [
-    {
-      id: 1,
-      title: 'Physical therapy',
+    /* Example: 
+     id: 1,
+      title: 'Vitamin',
       time: 'Tomorrow, 10:30 AM',
-      details: 'Bring exercise band and water bottle.',
+      details: 'Take Vitamin D and B.',
       confirmed: false,
-    },
+    */
   ],
-  tasks: [
-    {
-      id: 1,
-      title: 'Pack lunch',
-      time: '7:30 AM',
-      details: 'Use the blue lunch bag from the kitchen.',
-      confirmed: false,
-    },
-    {
-      id: 2,
-      title: 'Call caregiver',
-      time: '4:00 PM',
-      details: 'Quick check-in before dinner.',
-      confirmed: false,
-    },
-  ],
+  appointments: [],
+  tasks: [],
 };
 
 const emptyReminder = {
@@ -55,6 +27,7 @@ const emptyReminder = {
   category: 'tasks',
   details: '',
 };
+
 
 function Homepage() {
   const [reminders, setReminders] = useState(initialReminders);
@@ -132,6 +105,7 @@ function Homepage() {
     setNewReminder(emptyReminder);
   }
 
+
   return (
     <div className="homepage">
       <a className="skip-link" href="#main-content">
@@ -139,20 +113,29 @@ function Homepage() {
       </a>
 
       <header className="hero">
+        <div className="hero-top">
         <div>
-          <p className="eyebrow">Everyday Tracker</p>
-          <h1>Simple reminders for medicine, appointments, and daily tasks.</h1>
-          <p className="hero-text">
-            A calm, accessible dashboard that keeps important responsibilities easy
-            to see, confirm, and complete.
-          </p>
+          <h1 className="eyebrow">
+            <Link to="/" className="title-link">
+              Everyday Tracker
+            </Link>
+          </h1>
+          
         </div>
 
         <div className="today-summary" aria-label="Today progress">
           <span>{completedCount}</span>
           <p>of {totalCount} reminders confirmed</p>
         </div>
-      </header>
+      </div>
+
+  <nav className="hero-nav">
+    <Link to="/" className="nav-tab active">Home</Link>
+    <Link to="/medications" className="nav-tab">Medications</Link>
+    <Link to="/appointments" className="nav-tab">Appointments</Link>
+    <Link to="/tasks" className="nav-tab">Tasks</Link>
+  </nav>
+</header>
 
       <main id="main-content" className="dashboard">
         <MedicationReminders

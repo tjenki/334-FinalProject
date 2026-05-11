@@ -21,7 +21,7 @@
 }
 
 .hero {
-  align-items: center;
+  align-items: left;
   background: #ffffff;
   border-bottom: 1px solid #d9e1ef;
   display: grid;
@@ -33,12 +33,13 @@
 .eyebrow,
 .section-heading p,
 .reminder-type {
-  color: #475c7a;
-  font-size: 0.9rem;
+  color: #747578;
+  font-size: 0.1rem;
   font-weight: 800;
   letter-spacing: 0;
   margin: 0 0 0.35rem;
   text-transform: uppercase;
+
 }
 
 .hero h1 {
@@ -222,4 +223,54 @@ textarea:focus-visible,
   .confirmation-button {
     width: 100%;
   }
+}
+
+
+/*Dropdown menu - start */
+
+.hero {
+  display: flex;
+  flex-direction: column; /* IMPORTANT: stacks top + nav vertically */
+  padding: 2rem;
+}
+
+.hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hero-nav {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #dbe3ea;
+  width: 100%;
+  size: 100000px;
+}
+
+.nav-tab {
+  text-decoration: none;
+  color: #6b7280;
+  font-weight: 500;
+  padding-bottom: 0.5rem;
+  border-bottom: 3px solid transparent;
+  font-size: 2rem;
+}
+
+.nav-tab.active {
+  color: #111827;
+  border-bottom: 3px solid #111827;
+}
+
+/*Dropdown menu - end */
+
+.title-link {
+  text-decoration: none;
+  color: inherit; 
+}
+
+.title-link:hover {
+  opacity: 0.8;
 }
