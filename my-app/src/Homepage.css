@@ -305,3 +305,17 @@
     width: 100%;
   }
 }
+.logout-button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0.65rem 1rem;
+  background: #176b5b;
+  color: #ffffff;
+}
+
+.logout-button:hover {
+  background: #0f4f43;
+}
