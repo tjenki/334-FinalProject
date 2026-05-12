@@ -70,6 +70,7 @@ function MedicationHistoryPage() {
                       ) : (
                         <p className="last-taken-message">Not marked as taken yet.</p>
                       )}
+                      <MedicationWarnings medication={medication} />
                     </div>
                     <Link className="history-edit-link" to="/medications">
                       Edit
@@ -99,20 +100,6 @@ function MedicationHistoryPage() {
                     </div>
                   </dl>
 
-                  <div className="history-box">
-                    <h4>Recent times taken</h4>
-                    {medication.takenHistory?.length ? (
-                      <ul>
-                        {medication.takenHistory.map((entry) => (
-                          <li key={entry.timestamp || `${entry.date}-${entry.time}`}>
-                            Taken on {formatHistoryDate(entry.date)} at {entry.time}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p>No taken history yet.</p>
-                    )}
-                  </div>
                 </li>
               ))}
             </ul>
@@ -133,6 +120,64 @@ function loadMedications() {
 
 function hasLastTakenTime(medication) {
   return Boolean(medication.lastTakenAt && medication.confirmedDate);
+}
+
+function MedicationWarnings({ medication }) {
+  const warnings = getMedicationWarnings(medication);
+
+  if (warnings.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="warning-list" aria-label={`Warnings for ${medication.name}`}>
+      {warnings.map((warning) => (
+        <p className="med-warning" key={warning}>
+          {warning}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function getMedicationWarnings(medication) {
+  const warnings = [];
+
+  if (shouldWarnRefillSoon(medication.refillsLeft)) {
+    warnings.push("Refill soon");
+  }
+
+  if (shouldWarnPrescriptionExpiresSoon(medication.prescriptionExpiresRaw)) {
+    warnings.push("Prescription expires soon");
+  }
+
+  return warnings;
+}
+
+function shouldWarnRefillSoon(refillsLeft) {
+  const refillNumber = Number(refillsLeft);
+
+  return Number.isFinite(refillNumber) && refillNumber <= 1;
+}
+
+function shouldWarnPrescriptionExpiresSoon(rawDate) {
+  if (!rawDate) {
+    return false;
+  }
+
+  const expirationDate = new Date(`${rawDate}T12:00:00`);
+
+  if (Number.isNaN(expirationDate.getTime())) {
+    return false;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  expirationDate.setHours(0, 0, 0, 0);
+
+  const daysUntilExpiration = (expirationDate - today) / (1000 * 60 * 60 * 24);
+
+  return daysUntilExpiration >= 0 && daysUntilExpiration <= 30;
 }
 
 function formatHistoryDate(value) {
