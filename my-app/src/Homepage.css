@@ -200,7 +200,7 @@ body.accessibility-high-contrast .alert-button {
 }
 
 .focus-create-links {
-  display: none;
+  display: flex;
   grid-column: 1 / -1;
   justify-content: space-between;
   align-items: center;
@@ -386,6 +386,18 @@ body.accessibility-high-contrast .medicine-alert {
   justify-content: flex-end;
 }
 
+.appointment-reminders-section .reminder-actions {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.appointment-reminders-section .reminder-actions button {
+  width: 8.5rem;
+  min-height: 42px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.9rem;
+}
+
 .confirmation-button {
   min-width: 9rem;
   background: var(--user-color, #176b5b);
@@ -500,10 +512,6 @@ body .add-reminder {
 body.accessibility-focus-mode .medication-reminders-section,
 body.accessibility-focus-mode .appointment-reminders-section {
   display: none;
-}
-
-body.accessibility-focus-mode .focus-create-links {
-  display: flex;
 }
 
 @media (max-width: 850px) {

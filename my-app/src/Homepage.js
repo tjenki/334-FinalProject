@@ -366,8 +366,7 @@ function Homepage() {
 
         <section className="focus-create-links" aria-labelledby="focus-create-title">
           <div>
-            <p className="reminder-type">Create reminders</p>
-            <h2 id="focus-create-title">Add what you need</h2>
+            <h2 className="reminder-type">Create reminders</h2>
           </div>
           <div className="focus-create-actions">
             <button
