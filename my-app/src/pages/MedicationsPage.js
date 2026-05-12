@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import "./styles.css";
+import { useNavigate } from 'react-router-dom';
+
 
 const storageKey = "easy-med-schedule";
 
@@ -24,6 +26,8 @@ function MedicationsPage() {
   const [ocrStatus, setOcrStatus] = useState(
     "After choosing a photo, OCR will try to read the label. Check the filled fields before saving."
   );
+  const navigate = useNavigate();
+
 
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(medications));
@@ -138,6 +142,11 @@ function MedicationsPage() {
       instructions: currentMedication.instructions || instructionLine || "",
     }));
   }
+  
+  function handleLogout() {
+  localStorage.removeItem("username");
+    navigate("/");
+}
 
   return (
     <div className={pageClasses}>
@@ -160,6 +169,9 @@ function MedicationsPage() {
         </div>
         <button className="secondary-button" type="button" onClick={() => window.print()}>
           Print schedule
+        </button>
+        <button onClick={handleLogout} className="logout-button">
+          Log Out
         </button>
       </header>
 

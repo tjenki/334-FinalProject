@@ -169,6 +169,16 @@
   padding: 0.65rem 1rem;
 }
 
+
+.secondary-button {
+  background: #1eaf33;
+  color: var(--text);
+  border: 2px solid var(--line);
+  padding: 0.65rem 1rem;
+  margin-left: 850px;
+
+}
+
 .medication-page .mode-button.active,
 .medication-page .tool-button[aria-pressed="true"] {
   background: var(--primary-dark);
