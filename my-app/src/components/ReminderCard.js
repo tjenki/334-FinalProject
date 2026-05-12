@@ -1,4 +1,13 @@
-function ReminderCard({ title, time, details, type, isConfirmed, onConfirm }) {
+function ReminderCard({
+  title,
+  time,
+  details,
+  type,
+  isConfirmed,
+  onConfirm,
+  onDelete,
+  alwaysShowDelete = false,
+}) {
   return (
     <article className={`reminder-card ${isConfirmed ? 'is-confirmed' : ''}`}>
       <div>
@@ -8,14 +17,22 @@ function ReminderCard({ title, time, details, type, isConfirmed, onConfirm }) {
         <p>{details}</p>
       </div>
 
-      <button
-        className="confirmation-button"
-        type="button"
-        onClick={onConfirm}
-        aria-pressed={isConfirmed}
-      >
-        {isConfirmed ? 'Confirmed' : 'Confirm done'}
-      </button>
+      <div className="reminder-actions">
+        <button
+          className="confirmation-button"
+          type="button"
+          onClick={onConfirm}
+          aria-pressed={isConfirmed}
+        >
+          {isConfirmed ? 'Confirmed' : 'Confirm done'}
+        </button>
+
+        {onDelete && (isConfirmed || alwaysShowDelete) && (
+          <button className="delete-reminder-button" type="button" onClick={onDelete}>
+            Delete 
+          </button>
+        )}
+      </div>
     </article>
   );
 }

@@ -123,6 +123,16 @@ function Homepage() {
     }
   }
 
+  function handleDeleteAppointment(reminderId) {
+    setReminders((currentReminders) => ({
+      ...currentReminders,
+      appointments: currentReminders.appointments.filter(
+        (appointment) => appointment.id !== reminderId
+      ),
+    }));
+    deleteStoredItem(appointmentStorageKey, reminderId);
+  }
+
   function handleReminderChange(event) {
     const { name, value } = event.target;
 
@@ -248,6 +258,7 @@ function Homepage() {
         <AppointmentReminders
           appointments={reminders.appointments}
           onConfirm={(id) => handleConfirm('appointments', id)}
+          onDelete={handleDeleteAppointment}
         />
         <TaskReminders
           tasks={reminders.tasks}
@@ -322,6 +333,13 @@ function toggleStoredItemConfirmed(key, id) {
   );
 
   localStorage.setItem(key, JSON.stringify(updatedItems));
+  window.dispatchEvent(new Event(dataChangeEvent));
+}
+
+function deleteStoredItem(key, id) {
+  const remainingItems = readStorageList(key).filter((item) => item.id !== id);
+
+  localStorage.setItem(key, JSON.stringify(remainingItems));
   window.dispatchEvent(new Event(dataChangeEvent));
 }
 

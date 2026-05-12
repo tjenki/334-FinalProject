@@ -213,6 +213,7 @@
   color: var(--text);
   border: 2px solid var(--line);
   padding: 0.65rem 1rem;
+  margin-left:850px;
 }
 
 .medication-page .mode-button.active,
@@ -339,10 +340,14 @@
 
 .medication-page .delete-button {
   flex: 0 0 auto;
-  background: #fde9e1;
-  color: #6b2614;
-  border: 2px solid #e4a28d;
+  background: var(--primary);
+  color: #ffffff;
+  border: 2px solid var(--primary-dark);
   padding: 0.55rem 0.8rem;
+}
+
+.medication-page .delete-button:hover {
+  background: var(--primary-dark);
 }
 
 .medication-page dl {

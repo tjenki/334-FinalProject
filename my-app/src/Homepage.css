@@ -338,6 +338,13 @@ body.accessibility-high-contrast .medicine-alert {
   padding: 0.8rem 1rem;
 }
 
+.reminder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
 .confirmation-button {
   min-width: 9rem;
   background: var(--user-color, #176b5b);
@@ -350,6 +357,21 @@ body.accessibility-high-contrast .medicine-alert {
 }
 
 .is-confirmed .confirmation-button {
+  background: var(--user-color-dark, #0f4f43);
+}
+
+.delete-reminder-button {
+  min-height: 48px;
+  border: 2px solid var(--user-color-dark, #0f4f43);
+  border-radius: 8px;
+  background: var(--user-color, #176b5b);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0.8rem 1rem;
+}
+
+.delete-reminder-button:hover {
   background: var(--user-color-dark, #0f4f43);
 }
 
@@ -429,6 +451,7 @@ body.accessibility-focus-mode .add-reminder {
 
   .nav-tab,
   .confirmation-button,
+  .delete-reminder-button,
   .alert-link,
   .alert-button {
     width: 100%;
