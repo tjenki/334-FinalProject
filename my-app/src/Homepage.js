@@ -73,6 +73,7 @@ function Homepage() {
   const dueMedicationMessage = dueMedications
     .map((medication) => `${medication.name}-${medication.time}`)
     .join('|');
+  const dailyChecklistItems = getDailyChecklistItems(reminders);
 
   useEffect(() => {
     let isCurrent = true;
@@ -244,12 +245,40 @@ function Homepage() {
               <button className="alert-button secondary-alert-button" type="button" onClick={stopMedicineAlarm}>
                 Stop sound
               </button>
+              {dueMedications.map((medication) => (
+                <button
+                  className="alert-button"
+                  type="button"
+                  key={medication.id}
+                  onClick={() => handleConfirm('medications', medication.id)}
+                >
+                  I took {medication.name}
+                </button>
+              ))}
               <Link to="/medications" className="alert-link">
                 View medicines
               </Link>
             </div>
           </section>
         )}
+
+        <section className="focus-create-links" aria-labelledby="focus-create-title">
+          <div>
+            <p className="reminder-type">Create reminders</p>
+            <h2 id="focus-create-title">Add what you need</h2>
+          </div>
+          <div className="focus-create-actions">
+            <Link to="/medications" className="alert-link">
+              Add medication
+            </Link>
+            <Link to="/appointments" className="alert-link">
+              Add appointment
+            </Link>
+            <a href="#add-reminder-heading" className="alert-link">
+              Add task
+            </a>
+          </div>
+        </section>
 
         <MedicationReminders
           medications={reminders.medications}
@@ -261,8 +290,9 @@ function Homepage() {
           onDelete={handleDeleteAppointment}
         />
         <TaskReminders
-          tasks={reminders.tasks}
-          onConfirm={(id) => handleConfirm('tasks', id)}
+          tasks={dailyChecklistItems}
+          onConfirm={handleConfirm}
+          onDeleteAppointment={handleDeleteAppointment}
         />
         <AddReminderForm
           newReminder={newReminder}
@@ -299,9 +329,14 @@ function loadStoredMedications() {
         instructions: medication.instructions || 'No instructions listed.',
         details: isDue
           ? `DUE NOW: ${medication.instructions || 'Take as instructed.'}`
+          : confirmedToday && medication.lastTakenAt && hasMultipleDailyDoses(medication)
+          ? `Last taken today at ${medication.lastTakenAt}`
           : medication.instructions || 'No instructions listed.',
         confirmed: confirmedToday,
         isDue,
+        category: 'medications',
+        type: isDue ? 'Medicine due now' : 'Medicine',
+        sortTime: getSortTime(timing.displayDose?.label || medication.times),
       };
     })
     .filter((medication) => !medication.confirmed);
@@ -316,7 +351,68 @@ function loadStoredAppointments() {
       time: [appointment.date, appointment.time].filter(Boolean).join(' at ') || 'Time not listed',
       details: appointment.reason || appointment.location || 'No details listed.',
       confirmed: Boolean(appointment.confirmed),
+      category: 'appointments',
+      type: 'Appointment',
+      rawDate: appointment.rawDate,
+      sortTime: getSortTime(appointment.time),
     }));
+}
+
+function getDailyChecklistItems(reminders) {
+  const medicationItems = reminders.medications.map((medication) => ({
+    ...medication,
+    category: 'medications',
+    type: medication.isDue ? 'Medicine due now' : 'Medicine',
+  }));
+
+  const appointmentItems = reminders.appointments
+    .filter((appointment) => isAppointmentForToday(appointment))
+    .map((appointment) => ({
+      ...appointment,
+      category: 'appointments',
+      type: 'Appointment',
+    }));
+
+  const taskItems = reminders.tasks.map((task) => ({
+    ...task,
+    category: 'tasks',
+    type: 'Task reminder',
+    sortTime: getSortTime(task.time),
+  }));
+
+  return [...medicationItems, ...appointmentItems, ...taskItems].sort(
+    (firstItem, secondItem) => firstItem.sortTime - secondItem.sortTime
+  );
+}
+
+function isAppointmentForToday(appointment) {
+  if (!appointment.rawDate) {
+    return true;
+  }
+
+  return appointment.rawDate === getTodayKey();
+}
+
+function getSortTime(time) {
+  const match = String(time || '').match(/(\d{1,2})(?::(\d{2}))?\s?(am|pm)?/i);
+
+  if (!match) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  let hours = Number(match[1]);
+  const minutes = Number(match[2] || 0);
+  const meridiem = match[3]?.toLowerCase();
+
+  if (meridiem === 'pm' && hours < 12) {
+    hours += 12;
+  }
+
+  if (meridiem === 'am' && hours === 12) {
+    hours = 0;
+  }
+
+  return hours * 60 + minutes;
 }
 
 function readStorageList(key) {
@@ -351,6 +447,7 @@ function getToggledItem(key, item) {
       ...item,
       confirmed: nextConfirmed,
       confirmedDate: nextConfirmed ? getTodayKey() : '',
+      lastTakenAt: nextConfirmed ? formatTakenTime(new Date()) : '',
     };
   }
 
@@ -372,6 +469,7 @@ function addStoredMedication(reminder) {
     sideEffects: 'Not listed',
     confirmed: false,
     confirmedDate: '',
+    lastTakenAt: '',
   };
 
   localStorage.setItem(
@@ -476,6 +574,13 @@ function formatDoseTime(date) {
   });
 }
 
+function formatTakenTime(date) {
+  return date.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 function isPastAppointment(appointment) {
   if (!appointment.rawDate || !appointment.rawTime) {
     return false;
@@ -488,6 +593,13 @@ function isPastAppointment(appointment) {
 
 function isConfirmedToday(medication) {
   return Boolean(medication.confirmed && medication.confirmedDate === getTodayKey());
+}
+
+function hasMultipleDailyDoses(medication) {
+  return (
+    parseMedicationTimes(medication.times).length > 1 ||
+    /twice|three times|multiple/i.test(medication.frequency || '')
+  );
 }
 
 function getTodayKey() {

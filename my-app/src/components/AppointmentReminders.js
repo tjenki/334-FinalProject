@@ -2,7 +2,7 @@ import ReminderCard from './ReminderCard';
 
 function AppointmentReminders({ appointments, onConfirm, onDelete }) {
   return (
-    <section className="app-section" aria-labelledby="appointment-heading">
+    <section className="app-section appointment-reminders-section" aria-labelledby="appointment-heading">
       <div className="section-heading">
         <p>Appointments</p>
         <h2 id="appointment-heading">Upcoming visits</h2>

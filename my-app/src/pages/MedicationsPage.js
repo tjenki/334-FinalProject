@@ -116,6 +116,7 @@ function MedicationsPage() {
               ...medication,
               confirmed: true,
               confirmedDate: getTodayKey(),
+              lastTakenAt: formatTakenTime(new Date()),
             }
           : medication
       )
@@ -436,6 +437,11 @@ function MedicationsPage() {
                     <div>
                       <h3>{medication.name}</h3>
                       <p className="med-purpose">For: {medication.purpose}</p>
+                      {shouldShowLastTaken(medication) && (
+                        <p className="last-taken-message">
+                          Last taken today at {medication.lastTakenAt}
+                        </p>
+                      )}
                       {isMedicationDue(medication, currentTime) && (
                         <p className="due-label">Due now</p>
                       )}
@@ -448,15 +454,6 @@ function MedicationsPage() {
                     >
                       Remove
                     </button>
-                    {isMedicationDue(medication, currentTime) && (
-                      <button
-                        className="primary-button"
-                        type="button"
-                        onClick={() => confirmMedicationTaken(medication.id)}
-                      >
-                        I took it
-                      </button>
-                    )}
                   </div>
                   <dl>
                     <div>
@@ -541,6 +538,21 @@ function isMedicationDue(medication, now = new Date()) {
   return Boolean(getMedicationTiming(medication.times, now).dueDose);
 }
 
+function shouldShowLastTaken(medication) {
+  return Boolean(
+    medication.lastTakenAt &&
+      medication.confirmedDate === getTodayKey() &&
+      hasMultipleDailyDoses(medication)
+  );
+}
+
+function hasMultipleDailyDoses(medication) {
+  return (
+    parseMedicationTimes(medication.times).length > 1 ||
+    /twice|three times|multiple/i.test(medication.frequency || "")
+  );
+}
+
 function getMedicationTiming(times, now = new Date()) {
   const parsedTimes = parseMedicationTimes(times);
 
@@ -607,6 +619,13 @@ function parseMedicationTimes(times) {
 }
 
 function formatDoseTime(date) {
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatTakenTime(date) {
   return date.toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",

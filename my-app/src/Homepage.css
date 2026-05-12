@@ -199,6 +199,30 @@ body.accessibility-high-contrast .alert-button {
   padding: 1.25rem;
 }
 
+.focus-create-links {
+  display: none;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  background: #ffffff;
+  border: 2px solid var(--user-color, #176b5b);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(23, 33, 27, 0.1);
+  padding: 1.25rem;
+}
+
+.focus-create-links h2 {
+  margin: 0;
+  font-size: 1.55rem;
+}
+
+.focus-create-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .medicine-alert h2 {
   margin: 0 0 0.35rem;
   color: #6b2614;
@@ -218,11 +242,16 @@ body.accessibility-high-contrast .alert-button {
   justify-content: center;
   flex: 0 0 auto;
   border-radius: 8px;
-  background: #c35b36;
+  background: var(--user-color, #176b5b);
   color: #ffffff;
+  border: 2px solid var(--user-color-dark, #0f4f43);
   font-weight: 800;
   padding: 0.8rem 1rem;
   text-decoration: none;
+}
+
+.alert-link:hover {
+  background: var(--user-color-dark, #0f4f43);
 }
 
 .alert-actions {
@@ -407,6 +436,10 @@ body.accessibility-high-contrast .medicine-alert {
   resize: vertical;
 }
 
+body .add-reminder {
+  display: none;
+}
+
 .logout-button {
   min-height: 48px;
   border: 2px solid var(--user-color-dark, #0f4f43);
@@ -418,8 +451,13 @@ body.accessibility-high-contrast .medicine-alert {
   padding: 0.65rem 1rem;
 }
 
-body.accessibility-focus-mode .add-reminder {
+body.accessibility-focus-mode .medication-reminders-section,
+body.accessibility-focus-mode .appointment-reminders-section {
   display: none;
+}
+
+body.accessibility-focus-mode .focus-create-links {
+  display: flex;
 }
 
 @media (max-width: 850px) {
@@ -458,6 +496,11 @@ body.accessibility-focus-mode .add-reminder {
   }
 
   .medicine-alert {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .focus-create-links {
     align-items: stretch;
     flex-direction: column;
   }

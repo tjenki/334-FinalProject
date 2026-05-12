@@ -322,6 +322,12 @@
   font-weight: 800;
 }
 
+.medication-page .last-taken-message {
+  margin-top: 0.5rem;
+  color: var(--primary-dark);
+  font-weight: 800;
+}
+
 .medication-page .appointment-card {
   border-left-color: var(--primary);
 }
@@ -411,10 +417,6 @@ body.accessibility-high-contrast .medication-page .med-card.is-due {
   background: #ffffff;
   border-color: #000000;
   box-shadow: none;
-}
-
-body.accessibility-focus-mode .medication-page .entry-panel {
-  display: none;
 }
 
 .settings-shell {
