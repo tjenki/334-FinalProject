@@ -15,7 +15,7 @@ function MedicationReminders({ medications, onConfirm }) {
             title={medicine.name}
             time={medicine.time}
             details={medicine.instructions}
-            type="Pill reminder"
+            type={medicine.isDue ? 'Medicine due now' : 'Pill reminder'}
             isConfirmed={medicine.confirmed}
             onConfirm={() => onConfirm(medicine.id)}
           />
