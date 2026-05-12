@@ -7,6 +7,27 @@
   line-height: 1.5;
 }
 
+body.accessibility-text-size-1 .homepage {
+  font-size: 21px;
+}
+
+body.accessibility-text-size-2 .homepage {
+  font-size: 24px;
+}
+
+body.accessibility-text-size-3 .homepage {
+  font-size: 27px;
+}
+
+body.accessibility-text-size-4 .homepage {
+  font-size: 30px;
+}
+
+body.accessibility-high-contrast .homepage {
+  background: #000000;
+  color: #000000;
+}
+
 .homepage * {
   box-sizing: border-box;
 }
@@ -53,6 +74,11 @@
   padding: 2rem clamp(1rem, 4vw, 3rem);
 }
 
+body.accessibility-high-contrast .hero {
+  background: #ffffff;
+  border-bottom-color: #000000;
+}
+
 .hero-top {
   display: flex;
   justify-content: space-between;
@@ -86,6 +112,14 @@
   border-radius: 8px;
   padding: 1rem 1.25rem;
   text-align: center;
+}
+
+body.accessibility-high-contrast .today-summary,
+body.accessibility-high-contrast .app-section,
+body.accessibility-high-contrast .reminder-card,
+body.accessibility-high-contrast .nav-tab {
+  border-color: #000000;
+  box-shadow: none;
 }
 
 .today-summary span {
@@ -130,6 +164,14 @@
 .nav-tab.active {
   background: #0f4f43;
   border-color: #0f4f43;
+  color: #ffffff;
+}
+
+body.accessibility-high-contrast .nav-tab:hover,
+body.accessibility-high-contrast .nav-tab.active,
+body.accessibility-high-contrast .confirmation-button,
+body.accessibility-high-contrast .primary-button {
+  background: #003f88;
   color: #ffffff;
 }
 
@@ -271,6 +313,21 @@
 .add-reminder textarea {
   min-height: 6rem;
   resize: vertical;
+}
+
+.logout-button {
+  min-height: 48px;
+  border: 2px solid #e4a28d;
+  border-radius: 8px;
+  background: #fde9e1;
+  color: #6b2614;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0.65rem 1rem;
+}
+
+body.accessibility-focus-mode .add-reminder {
+  display: none;
 }
 
 @media (max-width: 850px) {

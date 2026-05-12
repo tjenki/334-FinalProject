@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import "./styles.css";
-import { useNavigate } from 'react-router-dom';
-
 
 const storageKey = "easy-med-schedule";
+const tesseractScriptUrl = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+let tesseractLoadPromise;
 
 const emptyMedication = {
   name: "",
@@ -20,29 +20,14 @@ function MedicationsPage() {
   const [medications, setMedications] = useState(() => loadMedications());
   const [newMedication, setNewMedication] = useState(emptyMedication);
   const [entryMode, setEntryMode] = useState("manual");
-  const [largeText, setLargeText] = useState(false);
-  const [highContrast, setHighContrast] = useState(false);
-  const [focusMode, setFocusMode] = useState(false);
   const [ocrStatus, setOcrStatus] = useState(
     "After choosing a photo, OCR will try to read the label. Check the filled fields before saving."
   );
   const navigate = useNavigate();
 
-
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(medications));
   }, [medications]);
-
-  const pageClasses = useMemo(() => {
-    return [
-      "medication-page",
-      largeText ? "large-text" : "",
-      highContrast ? "high-contrast" : "",
-      focusMode ? "focus-mode" : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-  }, [focusMode, highContrast, largeText]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -97,7 +82,9 @@ function MedicationsPage() {
       return;
     }
 
-    if (!window.Tesseract) {
+    const tesseract = await loadTesseract();
+
+    if (!tesseract) {
       setOcrStatus(
         "OCR could not load. You can still type the medicine details or use the sample button."
       );
@@ -107,7 +94,7 @@ function MedicationsPage() {
     setOcrStatus("Reading label. This may take a moment.");
 
     try {
-      const result = await window.Tesseract.recognize(file, "eng");
+      const result = await tesseract.recognize(file, "eng");
       applyOcrText(result.data.text || "");
       setOcrStatus("Label read. Please review the filled fields before saving.");
     } catch {
@@ -144,12 +131,12 @@ function MedicationsPage() {
   }
   
   function handleLogout() {
-  localStorage.removeItem("username");
+    localStorage.removeItem("username");
     navigate("/");
-}
+  }
 
   return (
-    <div className={pageClasses}>
+    <div className="medication-page">
       <a className="skip-link" href="#main">
         Skip to medicine form
       </a>
@@ -167,10 +154,10 @@ function MedicationsPage() {
             <Link to="/tasks">Settings</Link>
           </nav>
         </div>
-        <button className="secondary-button" type="button" onClick={() => window.print()}>
+        <button className="secondary-button-print-schedule" type="button" onClick={() => window.print()}>
           Print schedule
         </button>
-        <button onClick={handleLogout} className="logout-button">
+        <button onClick={handleLogout} className="logout-button" type="button">
           Log Out
         </button>
       </header>
@@ -342,33 +329,6 @@ function MedicationsPage() {
             </p>
           </div>
 
-          <div className="support-tools" aria-label="Accessibility display options">
-            <button
-              className="tool-button"
-              type="button"
-              aria-pressed={largeText}
-              onClick={() => setLargeText((currentValue) => !currentValue)}
-            >
-              Larger text
-            </button>
-            <button
-              className="tool-button"
-              type="button"
-              aria-pressed={highContrast}
-              onClick={() => setHighContrast((currentValue) => !currentValue)}
-            >
-              High contrast
-            </button>
-            <button
-              className="tool-button"
-              type="button"
-              aria-pressed={focusMode}
-              onClick={() => setFocusMode((currentValue) => !currentValue)}
-            >
-              Focus mode
-            </button>
-          </div>
-
           {medications.length === 0 ? (
             <div className="empty-state">
               <h3>No schedule yet</h3>
@@ -446,6 +406,25 @@ function loadMedications() {
   } catch {
     return [];
   }
+}
+
+function loadTesseract() {
+  if (window.Tesseract) {
+    return Promise.resolve(window.Tesseract);
+  }
+
+  if (!tesseractLoadPromise) {
+    tesseractLoadPromise = new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = tesseractScriptUrl;
+      script.async = true;
+      script.onload = () => resolve(window.Tesseract);
+      script.onerror = () => resolve(null);
+      document.body.appendChild(script);
+    });
+  }
+
+  return tesseractLoadPromise;
 }
 
 export default MedicationsPage;
