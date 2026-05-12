@@ -167,6 +167,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+  align-items: center;
 }
 
 .medication-page .alert-button {
@@ -174,6 +175,21 @@
   color: #ffffff;
   border: 2px solid #c35b36;
   padding: 0.8rem 1rem;
+}
+
+.medication-page .alert-select-label {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  color: #6b2614;
+  font-weight: 800;
+}
+
+.medication-page .alert-select-label select {
+  min-height: 48px;
+  border: 2px solid #c35b36;
+  border-radius: 8px;
+  padding: 0.55rem;
 }
 
 .medication-page .entry-panel,
@@ -247,6 +263,83 @@
   margin-bottom: 0.65rem;
 }
 
+.medication-page .camera-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.medication-page .camera-button,
+.medication-page .upload-photo-button {
+  min-height: 52px;
+  align-items: center;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 800;
+  justify-content: center;
+  padding: 0.75rem 1.15rem;
+  text-align: center;
+}
+
+.medication-page .upload-photo-button {
+  background: #e8efe9;
+  border: 2px solid var(--line);
+  color: var(--text);
+  font: inherit;
+}
+
+.medication-page .upload-photo-button:hover,
+.medication-page .upload-photo-button:focus-visible {
+  background: var(--primary-dark);
+  color: #ffffff;
+}
+
+.medication-page .sr-only-photo-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.medication-page .camera-panel {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.medication-page .camera-panel video {
+  width: 100%;
+  max-height: 360px;
+  background: #17211b;
+  border: 3px solid var(--primary);
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.medication-page .camera-canvas {
+  display: none;
+}
+
+.medication-page .camera-error {
+  color: #8a1f11;
+  font-weight: 800;
+}
+
+.medication-page .photo-instructions {
+  margin: 0.5rem 0 0;
+}
+
+.medication-page .photo-name {
+  margin: 0.75rem 0 0;
+  color: #17211b;
+  font-weight: 800;
+}
+
 .medication-page .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -271,6 +364,23 @@
   padding: 0.75rem;
   background: #ffffff;
   color: var(--text);
+}
+
+.medication-page .upload-photo-button {
+  display: inline-flex;
+  margin-bottom: 0;
+}
+
+.medication-page .sr-only-photo-input {
+  position: absolute;
+  width: 1px;
+  min-height: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  padding: 0;
+  white-space: nowrap;
 }
 
 .medication-page textarea {
@@ -339,6 +449,13 @@
   align-items: flex-start;
 }
 
+.medication-page .card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
 .medication-page .med-purpose {
   color: var(--muted);
   margin-bottom: 0;
@@ -377,6 +494,33 @@
 
 .medication-page dd {
   margin: 0;
+}
+
+.medication-page .history-box {
+  margin-top: 1rem;
+  padding: 0.85rem;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: #f9fbf7;
+}
+
+.medication-page .history-box h4 {
+  margin: 0 0 0.5rem;
+  color: var(--primary-dark);
+  font-size: 1rem;
+}
+
+.medication-page .history-box ul {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.medication-page .history-box p {
+  margin-bottom: 0;
+  color: var(--muted);
+  font-weight: 700;
 }
 
 body.accessibility-text-size-1 .medication-page {
@@ -569,6 +713,10 @@ body.accessibility-high-contrast .medication-page .med-card.is-due {
     width: 100%;
   }
 
+  .medication-page .card-actions {
+    width: 100%;
+  }
+
   .setting-row {
     grid-template-columns: 1fr;
   }
@@ -607,4 +755,8 @@ body.accessibility-high-contrast .medication-page .med-card.is-due {
     box-shadow: none;
     border: 0;
   }
+}
+
+.logout-button{
+  margin-left : 8px;
 }

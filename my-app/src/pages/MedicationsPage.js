@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { recognize } from "tesseract.js";
 import { startMedicineAlarm, stopMedicineAlarm } from "../medicineAlarm";
 import "./styles.css";
 
 const storageKey = "easy-med-schedule";
 const dataChangeEvent = "everyday-tracker-data-change";
-const tesseractScriptUrl = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
-let tesseractLoadPromise;
+const ocrAssetPath = `${process.env.PUBLIC_URL || ""}/ocr`;
 
 const emptyMedication = {
   name: "",
@@ -16,14 +16,24 @@ const emptyMedication = {
   times: "",
   instructions: "",
   sideEffects: "",
+  reminderDelayMinutes: "30",
 };
 
 function MedicationsPage() {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const cameraStreamRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [medications, setMedications] = useState(() => loadMedications());
   const [newMedication, setNewMedication] = useState(emptyMedication);
+  const [editingMedicationId, setEditingMedicationId] = useState(null);
+  const [snoozeMinutes, setSnoozeMinutes] = useState("30");
   const [entryMode, setEntryMode] = useState("manual");
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [soundBlocked, setSoundBlocked] = useState(false);
+  const [selectedPhotoName, setSelectedPhotoName] = useState("");
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState("");
   const [ocrStatus, setOcrStatus] = useState(
     "After choosing a photo, OCR will try to read the label. Check the filled fields before saving."
   );
@@ -45,6 +55,12 @@ function MedicationsPage() {
     }, 5000);
 
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+    };
   }, []);
 
   useEffect(() => {
@@ -90,16 +106,34 @@ function MedicationsPage() {
       return;
     }
 
-    setMedications((currentMedications) => [
-      ...currentMedications,
-      {
-        ...medication,
-        id: Date.now(),
-        confirmed: false,
-        confirmedDate: "",
-      },
-    ]);
+    if (editingMedicationId) {
+      setMedications((currentMedications) =>
+        currentMedications.map((currentMedication) =>
+          currentMedication.id === editingMedicationId
+            ? {
+                ...currentMedication,
+                ...medication,
+              }
+            : currentMedication
+        )
+      );
+    } else {
+      setMedications((currentMedications) => [
+        ...currentMedications,
+        {
+          ...medication,
+          id: Date.now(),
+          confirmed: false,
+          confirmedDate: "",
+          lastTakenAt: "",
+          takenHistory: [],
+          snoozedUntil: "",
+        },
+      ]);
+    }
+
     setNewMedication(emptyMedication);
+    setEditingMedicationId(null);
   }
 
   function removeMedication(id) {
@@ -109,6 +143,8 @@ function MedicationsPage() {
   }
 
   function confirmMedicationTaken(id) {
+    const takenAt = new Date();
+
     setMedications((currentMedications) =>
       currentMedications.map((medication) =>
         medication.id === id
@@ -116,11 +152,55 @@ function MedicationsPage() {
               ...medication,
               confirmed: true,
               confirmedDate: getTodayKey(),
-              lastTakenAt: formatTakenTime(new Date()),
+              lastTakenAt: formatTakenTime(takenAt),
+              snoozedUntil: "",
+              takenHistory: [
+                {
+                  date: getTodayKey(takenAt),
+                  time: formatTakenTime(takenAt),
+                  timestamp: takenAt.toISOString(),
+                },
+                ...(medication.takenHistory || []),
+              ].slice(0, 10),
             }
           : medication
       )
     );
+  }
+
+  function snoozeMedication(id) {
+    const snoozedUntil = new Date();
+    snoozedUntil.setMinutes(snoozedUntil.getMinutes() + Number(snoozeMinutes || 30));
+
+    setMedications((currentMedications) =>
+      currentMedications.map((medication) =>
+        medication.id === id
+          ? {
+              ...medication,
+              snoozedUntil: snoozedUntil.toISOString(),
+            }
+          : medication
+      )
+    );
+    setOcrStatus(`Reminder moved ${snoozeMinutes} minutes later.`);
+  }
+
+  function editMedication(medication) {
+    setEditingMedicationId(medication.id);
+    setEntryMode("manual");
+    setNewMedication({
+      name: medication.name === "Not listed" ? "" : medication.name || "",
+      purpose: medication.purpose === "Not listed" ? "" : medication.purpose || "",
+      dosage: medication.dosage === "Not listed" ? "" : medication.dosage || "",
+      frequency: medication.frequency || "Once daily",
+      times: medication.times === "Not listed" ? "" : medication.times || "",
+      instructions: medication.instructions === "Not listed" ? "" : medication.instructions || "",
+      sideEffects: medication.sideEffects === "Not listed" ? "" : medication.sideEffects || "",
+      reminderDelayMinutes: String(medication.reminderDelayMinutes || 30),
+    });
+    window.requestAnimationFrame(() => {
+      document.querySelector("#form-title")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function fillSampleMedication() {
@@ -142,26 +222,124 @@ function MedicationsPage() {
       return;
     }
 
-    const tesseract = await loadTesseract();
+    await processBottleImage(file, file.name);
+    event.target.value = "";
+  }
 
-    if (!tesseract) {
-      setOcrStatus(
-        "OCR could not load. You can still type the medicine details or use the sample button."
-      );
-      return;
-    }
+  function openPhotoPicker() {
+    setCameraError("");
+    setOcrStatus("Choose a clear photo of the bottle label.");
+    fileInputRef.current?.click();
+  }
 
+  async function processBottleImage(file, photoName) {
+    setSelectedPhotoName(photoName);
+    setCameraError("");
     setOcrStatus("Reading label. This may take a moment.");
 
     try {
-      const result = await tesseract.recognize(file, "eng");
-      applyOcrText(result.data.text || "");
-      setOcrStatus("Label read. Please review the filled fields before saving.");
-    } catch {
+      const imageForOcr = await prepareImageForOcr(file);
+      const result = await recognize(imageForOcr, "eng", {
+        workerPath: `${ocrAssetPath}/worker.min.js`,
+        corePath: ocrAssetPath,
+        workerBlobURL: false,
+        logger: (message) => {
+          if (message.status === "recognizing text") {
+            setOcrStatus(`Reading label: ${Math.round(message.progress * 100)}% done.`);
+          }
+        },
+      });
+      const filledFields = applyOcrText(result.data.text || "");
       setOcrStatus(
-        "OCR could not read this photo. Try a brighter, closer picture or type the details."
+        filledFields.length
+          ? `Label read. Filled: ${filledFields.join(", ")}. Please review before saving.`
+          : "Label read, but the text was unclear. Please type the details you can see."
+      );
+    } catch (error) {
+      setOcrStatus(
+        error.message ||
+          "OCR could not read this photo. Try a brighter, closer JPG or PNG picture."
       );
     }
+  }
+
+  async function openCamera() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError("Camera is not available in this browser. You can still upload a photo.");
+      return;
+    }
+
+    setCameraError("");
+    setOcrStatus("Opening camera. Your browser may ask for permission.");
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+
+      cameraStreamRef.current = stream;
+      setCameraOpen(true);
+
+      window.setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {
+            setCameraError("Camera opened, but the preview could not start.");
+          });
+        }
+      }, 0);
+
+      setOcrStatus("Camera is open. Hold the bottle label steady, then press Take photo.");
+    } catch {
+      setCameraError("Camera permission was blocked or no camera was found. Try uploading a photo instead.");
+      setOcrStatus("Camera could not open. You can still upload a photo.");
+    }
+  }
+
+  function closeCamera() {
+    stopCameraStream();
+    setCameraOpen(false);
+  }
+
+  function stopCameraStream() {
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+    cameraStreamRef.current = null;
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }
+
+  function takeCameraPhoto() {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas || video.readyState < 2) {
+      setCameraError("Camera is still loading. Wait a second, then try again.");
+      return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const context = canvas.getContext("2d");
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        setCameraError("Photo could not be captured. Please try again.");
+        return;
+      }
+
+      const photoFile = new File([blob], "camera-bottle-label.jpg", { type: "image/jpeg" });
+      processBottleImage(photoFile, "Camera photo");
+      closeCamera();
+    }, "image/jpeg", 0.92);
   }
 
   function applyOcrText(text) {
@@ -170,24 +348,32 @@ function MedicationsPage() {
       .map((line) => line.trim())
       .filter(Boolean);
 
-    const firstLikelyName = lines.find(
-      (line) => /[a-z]/i.test(line) && !/\bmg\b|\btablet\b|\bcapsule\b/i.test(line)
-    );
-    const dosageMatch = text.match(/\b\d+(\.\d+)?\s?(mg|mcg|g|ml|units?)\b/i);
-    const timesMatch = text.match(
-      /\b\d{1,2}(:\d{2})?\s?(am|pm)\b(?:\s*,?\s*\b\d{1,2}(:\d{2})?\s?(am|pm)\b)?/i
-    );
-    const instructionLine = lines.find((line) =>
-      /\bwith food\b|\bbefore bed\b|\bafter meal\b|\btake\b/i.test(line)
-    );
+    const extractedMedication = extractMedicationFromLabel(text, lines);
+    const filledFields = [];
 
     setNewMedication((currentMedication) => ({
       ...currentMedication,
-      name: currentMedication.name || firstLikelyName || "",
-      dosage: currentMedication.dosage || dosageMatch?.[0] || "",
-      times: currentMedication.times || timesMatch?.[0] || "",
-      instructions: currentMedication.instructions || instructionLine || "",
+      name: currentMedication.name || trackFilledField("name", extractedMedication.name),
+      dosage: currentMedication.dosage || trackFilledField("dosage", extractedMedication.dosage),
+      frequency:
+        currentMedication.frequency !== emptyMedication.frequency
+          ? currentMedication.frequency
+          : trackFilledField("frequency", extractedMedication.frequency) || currentMedication.frequency,
+      times: currentMedication.times || trackFilledField("times", extractedMedication.times),
+      instructions:
+        currentMedication.instructions ||
+        trackFilledField("instructions", extractedMedication.instructions),
     }));
+
+    return filledFields;
+
+    function trackFilledField(fieldName, value) {
+      if (value) {
+        filledFields.push(fieldName);
+      }
+
+      return value || "";
+    }
   }
   
   function handleLogout() {
@@ -251,13 +437,35 @@ function MedicationsPage() {
                   I took {medication.name}
                 </button>
               ))}
+              <label className="alert-select-label" htmlFor="snooze-minutes">
+                Remind again in
+                <select
+                  id="snooze-minutes"
+                  value={snoozeMinutes}
+                  onChange={(event) => setSnoozeMinutes(event.target.value)}
+                >
+                  <option value="30">30 minutes</option>
+                  <option value="45">45 minutes</option>
+                  <option value="60">1 hour</option>
+                </select>
+              </label>
+              {dueMedications.map((medication) => (
+                <button
+                  className="alert-button secondary-alert-button"
+                  type="button"
+                  key={`snooze-${medication.id}`}
+                  onClick={() => snoozeMedication(medication.id)}
+                >
+                  Remind me later
+                </button>
+              ))}
             </div>
           </section>
         )}
 
         <section className="entry-panel" aria-labelledby="form-title">
           <div className="section-heading">
-            <h2 id="form-title">Add a medication</h2>
+            <h2 id="form-title">{editingMedicationId ? "Edit medication" : "Add a medication"}</h2>
             <p>Enter only what you know. You can come back and fill in missing details later.</p>
           </div>
 
@@ -282,16 +490,57 @@ function MedicationsPage() {
 
           {entryMode === "photo" && (
             <div className="photo-help">
-              <label htmlFor="labelPhoto">Take or upload a clear photo of the bottle label</label>
+              <div className="camera-actions">
+                <button className="primary-button camera-button" type="button" onClick={openCamera}>
+                  Open camera
+                </button>
+                <button className="upload-photo-button" type="button" onClick={openPhotoPicker}>
+                  Upload photo
+                </button>
+              </div>
+
               <input
+                ref={fileInputRef}
+                className="sr-only-photo-input"
                 id="labelPhoto"
                 name="labelPhoto"
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 capture="environment"
                 onChange={readBottleLabel}
               />
-              <p>{ocrStatus}</p>
+
+              {cameraOpen && (
+                <div className="camera-panel" aria-label="Camera preview">
+                  <video ref={videoRef} playsInline muted />
+                  <div className="camera-actions">
+                    <button className="primary-button camera-button" type="button" onClick={takeCameraPhoto}>
+                      Take photo
+                    </button>
+                    <button className="secondary-button camera-button" type="button" onClick={closeCamera}>
+                      Close camera
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <canvas ref={canvasRef} className="camera-canvas" aria-hidden="true" />
+
+              {cameraError && (
+                <p className="camera-error" role="alert">
+                  {cameraError}
+                </p>
+              )}
+
+              <p className="photo-instructions">
+                Take or upload a clear photo of the bottle label. Then check the filled fields before saving.
+              </p>
+              {selectedPhotoName && (
+                <p className="photo-name">Selected photo: {selectedPhotoName}</p>
+              )}
+              <p role="status" aria-live="polite">
+                {ocrStatus}
+              </p>
               <button className="secondary-button" type="button" onClick={fillSampleMedication}>
                 Fill sample from label
               </button>
@@ -377,6 +626,20 @@ function MedicationsPage() {
                   onChange={handleChange}
                 />
               </label>
+
+              <label htmlFor="reminderDelayMinutes">
+                <span>If missed, remind again after</span>
+                <select
+                  id="reminderDelayMinutes"
+                  name="reminderDelayMinutes"
+                  value={newMedication.reminderDelayMinutes}
+                  onChange={handleChange}
+                >
+                  <option value="30">30 minutes</option>
+                  <option value="45">45 minutes</option>
+                  <option value="60">1 hour</option>
+                </select>
+              </label>
             </div>
 
             <label className="full-width" htmlFor="sideEffects">
@@ -398,14 +661,17 @@ function MedicationsPage() {
 
             <div className="action-row">
               <button className="primary-button" type="submit">
-                Save medication
+                {editingMedicationId ? "Save changes" : "Save medication"}
               </button>
               <button
                 className="secondary-button"
                 type="button"
-                onClick={() => setNewMedication(emptyMedication)}
+                onClick={() => {
+                  setNewMedication(emptyMedication);
+                  setEditingMedicationId(null);
+                }}
               >
-                Clear form
+                {editingMedicationId ? "Cancel edit" : "Clear form"}
               </button>
             </div>
           </form>
@@ -446,14 +712,24 @@ function MedicationsPage() {
                         <p className="due-label">Due now</p>
                       )}
                     </div>
-                    <button
-                      className="delete-button"
-                      type="button"
-                      aria-label={`Remove ${medication.name}`}
-                      onClick={() => removeMedication(medication.id)}
-                    >
-                      Remove
-                    </button>
+                    <div className="card-actions">
+                      <button
+                        className="delete-button"
+                        type="button"
+                        aria-label={`Edit ${medication.name}`}
+                        onClick={() => editMedication(medication)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="delete-button"
+                        type="button"
+                        aria-label={`Remove ${medication.name}`}
+                        onClick={() => removeMedication(medication.id)}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                   <dl>
                     <div>
@@ -476,7 +752,25 @@ function MedicationsPage() {
                       <dt>Common side effects</dt>
                       <dd>{medication.sideEffects}</dd>
                     </div>
+                    <div>
+                      <dt>Reminder</dt>
+                      <dd>Remind again after {formatMinutesLabel(medication.reminderDelayMinutes || 30)}</dd>
+                    </div>
                   </dl>
+                  <div className="history-box">
+                    <h4>Medication history</h4>
+                    {medication.takenHistory?.length ? (
+                      <ul>
+                        {medication.takenHistory.map((entry) => (
+                          <li key={entry.timestamp || `${entry.date}-${entry.time}`}>
+                            Taken on {formatHistoryDate(entry.date)} at {entry.time}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>No taken history yet.</p>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -496,7 +790,166 @@ function normalizeMedication(medication) {
     times: clean(medication.times) || "Not listed",
     instructions: clean(medication.instructions) || "Not listed",
     sideEffects: clean(medication.sideEffects) || "Not listed",
+    reminderDelayMinutes: Number(medication.reminderDelayMinutes) || 30,
   };
+}
+
+async function prepareImageForOcr(file) {
+  if (isHeicImage(file)) {
+    throw new Error(
+      "This looks like a HEIC iPhone photo, which OCR cannot read here. Please use the camera button, or choose a JPG or PNG photo."
+    );
+  }
+
+  const imageUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await loadImage(imageUrl);
+    const maxSize = 1600;
+    const scale = Math.min(1, maxSize / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas");
+
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+    const context = canvas.getContext("2d");
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    return await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("The photo could not be prepared for OCR. Try a JPG or PNG photo."));
+          }
+        },
+        "image/jpeg",
+        0.9
+      );
+    });
+  } catch {
+    throw new Error(
+      "This photo could not be opened by the browser. Try using the camera button, or upload a JPG or PNG photo."
+    );
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+}
+
+function loadImage(imageUrl) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = imageUrl;
+  });
+}
+
+function isHeicImage(file) {
+  return (
+    /hei(c|f)/i.test(file.type || "") ||
+    /\.(hei(c|f))$/i.test(file.name || "")
+  );
+}
+
+function extractMedicationFromLabel(text, lines) {
+  const dosageMatch = text.match(/\b\d+(\.\d+)?\s?(mg|mcg|g|ml|units?)\b/i);
+  const instructionLine = findInstructionLine(lines);
+  const frequency = extractFrequency(text);
+  const times = extractTimes(text);
+
+  return {
+    name: extractMedicationName(lines, dosageMatch?.[0]),
+    dosage: dosageMatch?.[0] || "",
+    frequency,
+    times,
+    instructions: instructionLine,
+  };
+}
+
+function extractMedicationName(lines, dosage) {
+  const skipPattern =
+    /\b(rx|qty|refill|refills|pharmacy|doctor|dr\.|patient|take|tablet|capsule|capsules|warning|discard|expiration|use by|prescriber|phone|date)\b/i;
+
+  const lineWithDosage = dosage
+    ? lines.find((line) => line.toLowerCase().includes(dosage.toLowerCase()))
+    : "";
+
+  if (lineWithDosage) {
+    const possibleName = cleanMedicineName(lineWithDosage, dosage);
+    if (possibleName) {
+      return possibleName;
+    }
+  }
+
+  const likelyNameLine = lines.find(
+    (line) =>
+      /[a-z]/i.test(line) &&
+      !skipPattern.test(line) &&
+      !/\d{3,}|^\W+$/.test(line)
+  );
+
+  return cleanMedicineName(likelyNameLine || "", dosage);
+}
+
+function cleanMedicineName(value, dosage) {
+  return String(value || "")
+    .replace(dosage || "", "")
+    .replace(/\b(tablets?|capsules?|caps?|tabs?|oral|solution|cream|ointment)\b/gi, "")
+    .replace(/[^a-z0-9 -]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function findInstructionLine(lines) {
+  const instructionLines = lines.filter((line) =>
+    /\b(take|use|apply|inject|place|chew|dissolve|with food|before bed|after meal|by mouth|under the tongue)\b/i.test(
+      line
+    )
+  );
+
+  return instructionLines.join(" ").replace(/\s+/g, " ").trim();
+}
+
+function extractFrequency(text) {
+  const frequencyPatterns = [
+    { pattern: /\btwice (a day|daily)\b/i, value: "Twice daily" },
+    { pattern: /\bthree times (a day|daily)\b/i, value: "Three times daily" },
+    { pattern: /\bonce (a day|daily)\b|\bdaily\b/i, value: "Once daily" },
+    { pattern: /\bevery other day\b/i, value: "Every other day" },
+    { pattern: /\bas needed\b|\bprn\b/i, value: "As needed" },
+  ];
+
+  return frequencyPatterns.find(({ pattern }) => pattern.test(text))?.value || "";
+}
+
+function extractTimes(text) {
+  const clockTimes = text.match(/\b\d{1,2}(:\d{2})?\s?(am|pm)\b/gi);
+
+  if (clockTimes?.length) {
+    return clockTimes.join(", ");
+  }
+
+  const dayParts = [];
+
+  if (/\bmorning\b/i.test(text)) {
+    dayParts.push("morning");
+  }
+
+  if (/\bnoon\b|\blunch\b/i.test(text)) {
+    dayParts.push("noon");
+  }
+
+  if (/\bevening\b|\bdinner\b/i.test(text)) {
+    dayParts.push("evening");
+  }
+
+  if (/\bbedtime\b|\bbefore bed\b/i.test(text)) {
+    dayParts.push("bedtime");
+  }
+
+  return dayParts.join(", ");
 }
 
 function clean(value) {
@@ -511,27 +964,12 @@ function loadMedications() {
   }
 }
 
-function loadTesseract() {
-  if (window.Tesseract) {
-    return Promise.resolve(window.Tesseract);
-  }
-
-  if (!tesseractLoadPromise) {
-    tesseractLoadPromise = new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.src = tesseractScriptUrl;
-      script.async = true;
-      script.onload = () => resolve(window.Tesseract);
-      script.onerror = () => resolve(null);
-      document.body.appendChild(script);
-    });
-  }
-
-  return tesseractLoadPromise;
-}
-
 function isMedicationDue(medication, now = new Date()) {
   if (isConfirmedToday(medication)) {
+    return false;
+  }
+
+  if (medication.snoozedUntil && new Date(medication.snoozedUntil) > now) {
     return false;
   }
 
@@ -636,13 +1074,28 @@ function isConfirmedToday(medication) {
   return Boolean(medication.confirmed && medication.confirmedDate === getTodayKey());
 }
 
-function getTodayKey() {
-  const today = new Date();
+function getTodayKey(today = new Date()) {
   const year = today.getFullYear();
   const month = String(today.getMonth() + 1).padStart(2, "0");
   const day = String(today.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+function formatMinutesLabel(minutes) {
+  return Number(minutes) === 60 ? "1 hour" : `${minutes} minutes`;
+}
+
+function formatHistoryDate(value) {
+  if (!value) {
+    return "today";
+  }
+
+  return new Date(`${value}T12:00:00`).toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export default MedicationsPage;

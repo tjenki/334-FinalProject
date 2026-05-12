@@ -6,6 +6,7 @@ function ReminderCard({
   isConfirmed,
   onConfirm,
   onDelete,
+  onEdit,
   alwaysShowDelete = false,
   showConfirm = true,
 }) {
@@ -19,6 +20,12 @@ function ReminderCard({
       </div>
 
       <div className="reminder-actions">
+        {onEdit && (
+          <button className="edit-reminder-button" type="button" onClick={onEdit}>
+            Edit
+          </button>
+        )}
+
         {showConfirm && (
           <button
             className="confirmation-button"

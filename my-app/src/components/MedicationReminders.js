@@ -1,6 +1,6 @@
 import ReminderCard from './ReminderCard';
 
-function MedicationReminders({ medications, onConfirm }) {
+function MedicationReminders({ medications, onConfirm, onEdit }) {
   return (
     <section className="app-section medication-reminders-section" aria-labelledby="medication-heading">
       <div className="section-heading">
@@ -18,6 +18,7 @@ function MedicationReminders({ medications, onConfirm }) {
             type={medicine.isDue ? 'Medicine due now' : 'Pill reminder'}
             isConfirmed={medicine.confirmed}
             onConfirm={() => onConfirm(medicine.id)}
+            onEdit={() => onEdit(medicine.id)}
             showConfirm={false}
           />
         ))}

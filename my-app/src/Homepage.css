@@ -179,9 +179,9 @@ body.accessibility-high-contrast .alert-button {
 
 .dashboard {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.25rem;
-  max-width: 1180px;
+  max-width: 1380px;
   margin: 0 auto;
   padding: 1.5rem clamp(1rem, 4vw, 3rem) 3rem;
 }
@@ -296,6 +296,13 @@ body.accessibility-high-contrast .medicine-alert {
   padding: 1.25rem;
 }
 
+.daily-checklist-section,
+.medication-reminders-section,
+.appointment-reminders-section {
+  max-height: 34rem;
+  overflow-y: auto;
+}
+
 .section-heading p,
 .reminder-type {
   margin: 0 0 0.35rem;
@@ -394,7 +401,8 @@ body.accessibility-high-contrast .medicine-alert {
   background: var(--user-color-dark, #0f4f43);
 }
 
-.delete-reminder-button {
+.delete-reminder-button,
+.edit-reminder-button {
   min-height: 48px;
   border: 2px solid var(--user-color-dark, #0f4f43);
   border-radius: 8px;
@@ -405,7 +413,8 @@ body.accessibility-high-contrast .medicine-alert {
   padding: 0.8rem 1rem;
 }
 
-.delete-reminder-button:hover {
+.delete-reminder-button:hover,
+.edit-reminder-button:hover {
   background: var(--user-color-dark, #0f4f43);
 }
 
@@ -513,6 +522,12 @@ body.accessibility-focus-mode .focus-create-links {
     width: 100%;
     text-align: left;
   }
+
+  .daily-checklist-section,
+  .medication-reminders-section,
+  .appointment-reminders-section {
+    max-height: none;
+  }
 }
 
 @media (max-width: 620px) {
@@ -527,6 +542,7 @@ body.accessibility-focus-mode .focus-create-links {
   .nav-tab,
   .confirmation-button,
   .delete-reminder-button,
+  .edit-reminder-button,
   .alert-link,
   .alert-button,
   .task-create-button,

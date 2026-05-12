@@ -32,6 +32,7 @@ const emptyMedication = {
   frequency: 'Once daily',
   time: '',
   instructions: '',
+  reminderDelayMinutes: '30',
 };
 
 const emptyAppointment = {
@@ -41,6 +42,7 @@ const emptyAppointment = {
   time: '',
   location: '',
   notes: '',
+  reminderBeforeMinutes: '30',
 };
 
 
@@ -52,6 +54,7 @@ function Homepage() {
   const [newMedication, setNewMedication] = useState(emptyMedication);
   const [newAppointment, setNewAppointment] = useState(emptyAppointment);
   const [activeQuickForm, setActiveQuickForm] = useState('');
+  const [editingTaskId, setEditingTaskId] = useState(null);
   const [soundBlocked, setSoundBlocked] = useState(false);
 
   useEffect(() => {
@@ -205,7 +208,7 @@ function Homepage() {
     event.preventDefault();
 
     const taskToAdd = {
-      id: Date.now(),
+      id: editingTaskId || Date.now(),
       title: newTask.title,
       name: newTask.title,
       time: formatTime(newTask.time),
@@ -217,11 +220,14 @@ function Homepage() {
 
     setReminders((currentReminders) => ({
       ...currentReminders,
-      tasks: [...currentReminders.tasks, taskToAdd],
+      tasks: editingTaskId
+        ? currentReminders.tasks.map((task) => (task.id === editingTaskId ? taskToAdd : task))
+        : [...currentReminders.tasks, taskToAdd],
     }));
 
-    saveStoredTask(taskToAdd);
+    saveStoredTask(taskToAdd, editingTaskId);
     setNewTask(emptyTask);
+    setEditingTaskId(null);
     setActiveQuickForm('');
   }
 
@@ -240,12 +246,29 @@ function Homepage() {
       confirmed: false,
       confirmedDate: '',
       lastTakenAt: '',
+      takenHistory: [],
     };
 
     saveStoredItem(medicationStorageKey, savedMedication);
     setReminders(loadStoredReminders());
     setNewMedication(emptyMedication);
     setActiveQuickForm('');
+  }
+
+  function editTask(taskId) {
+    const task = reminders.tasks.find((currentTask) => currentTask.id === taskId);
+
+    if (!task) {
+      return;
+    }
+
+    setEditingTaskId(taskId);
+    setNewTask({
+      title: task.title || task.name || '',
+      time: getInputTimeValue(task.time),
+      details: task.details || '',
+    });
+    setActiveQuickForm('task');
   }
 
   function handleAddAppointment(event) {
@@ -444,6 +467,18 @@ function Homepage() {
                 rows="3"
               />
 
+              <label htmlFor="quick-medication-reminder-delay">If missed, remind again after</label>
+              <select
+                id="quick-medication-reminder-delay"
+                name="reminderDelayMinutes"
+                value={newMedication.reminderDelayMinutes}
+                onChange={handleMedicationChange}
+              >
+                <option value="30">30 minutes</option>
+                <option value="45">45 minutes</option>
+                <option value="60">1 hour</option>
+              </select>
+
               <div className="task-form-actions">
                 <button className="primary-button" type="submit">
                   Save medication
@@ -529,6 +564,18 @@ function Homepage() {
                 rows="3"
               />
 
+              <label htmlFor="quick-appointment-reminder">Remind me before</label>
+              <select
+                id="quick-appointment-reminder"
+                name="reminderBeforeMinutes"
+                value={newAppointment.reminderBeforeMinutes}
+                onChange={handleAppointmentChange}
+              >
+                <option value="15">15 minutes before</option>
+                <option value="30">30 minutes before</option>
+                <option value="60">1 hour before</option>
+              </select>
+
               <div className="task-form-actions">
                 <button className="primary-button" type="submit">
                   Save appointment
@@ -588,13 +635,14 @@ function Homepage() {
 
               <div className="task-form-actions">
                 <button className="primary-button" type="submit">
-                  Save task
+                  {editingTaskId ? 'Save changes' : 'Save task'}
                 </button>
                 <button
                   className="secondary-task-button"
                   type="button"
                   onClick={() => {
                     setNewTask(emptyTask);
+                    setEditingTaskId(null);
                     setActiveQuickForm('');
                   }}
                 >
@@ -608,16 +656,21 @@ function Homepage() {
         <MedicationReminders
           medications={reminders.medications}
           onConfirm={(id) => handleConfirm('medications', id)}
+          onEdit={() => navigate('/medications')}
         />
         <AppointmentReminders
           appointments={reminders.appointments}
           onConfirm={(id) => handleConfirm('appointments', id)}
           onDelete={handleDeleteAppointment}
+          onEdit={() => navigate('/appointments')}
         />
         <TaskReminders
           tasks={dailyChecklistItems}
           onConfirm={handleConfirm}
           onDeleteAppointment={handleDeleteAppointment}
+          onEditTask={editTask}
+          onEditMedication={() => navigate('/medications')}
+          onEditAppointment={() => navigate('/appointments')}
         />
       </main>
     </div>
@@ -640,7 +693,8 @@ function loadStoredMedications() {
     .map((medication) => {
       const timing = getMedicationTiming(medication.times);
       const confirmedToday = isConfirmedToday(medication);
-      const isDue = Boolean(timing.dueDose && !confirmedToday);
+      const isSnoozed = Boolean(medication.snoozedUntil && new Date(medication.snoozedUntil) > new Date());
+      const isDue = Boolean(timing.dueDose && !confirmedToday && !isSnoozed);
 
       return {
         id: medication.id,
@@ -670,7 +724,14 @@ function loadStoredAppointments() {
       id: appointment.id,
       title: appointment.provider || 'Appointment',
       time: [appointment.date, appointment.time].filter(Boolean).join(' at ') || 'Time not listed',
-      details: appointment.reason || appointment.location || 'No details listed.',
+      details: [
+        appointment.reason || appointment.location || 'No details listed.',
+        appointment.reminderBeforeMinutes
+          ? `Reminder: ${formatMinutesLabel(appointment.reminderBeforeMinutes)} before`
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' | '),
       confirmed: Boolean(appointment.confirmed),
       category: 'appointments',
       type: 'Appointment',
@@ -775,8 +836,21 @@ function deleteStoredItem(key, id) {
   window.dispatchEvent(new Event(dataChangeEvent));
 }
 
-function saveStoredTask(task) {
-  saveStoredItem(taskStorageKey, task);
+function saveStoredTask(task, existingTaskId = null) {
+  if (!existingTaskId) {
+    saveStoredItem(taskStorageKey, task);
+    return;
+  }
+
+  localStorage.setItem(
+    taskStorageKey,
+    JSON.stringify(
+      readStorageList(taskStorageKey).map((storedTask) =>
+        storedTask.id === existingTaskId ? task : storedTask
+      )
+    )
+  );
+  window.dispatchEvent(new Event(dataChangeEvent));
 }
 
 function saveStoredItem(key, item) {
@@ -793,6 +867,17 @@ function getToggledItem(key, item) {
       confirmed: nextConfirmed,
       confirmedDate: nextConfirmed ? getTodayKey() : '',
       lastTakenAt: nextConfirmed ? formatTakenTime(new Date()) : '',
+      snoozedUntil: '',
+      takenHistory: nextConfirmed
+        ? [
+            {
+              date: getTodayKey(),
+              time: formatTakenTime(new Date()),
+              timestamp: new Date().toISOString(),
+            },
+            ...(item.takenHistory || []),
+          ].slice(0, 10)
+        : item.takenHistory || [],
     };
   }
 
@@ -811,6 +896,9 @@ function normalizeMedicationForStorage(medication) {
     times: clean(medication.time) ? formatStoredTime(medication.time) : 'Not listed',
     instructions: clean(medication.instructions) || 'Not listed',
     sideEffects: 'Not listed',
+    reminderDelayMinutes: Number(medication.reminderDelayMinutes) || 30,
+    takenHistory: [],
+    snoozedUntil: '',
   };
 }
 
@@ -825,6 +913,7 @@ function normalizeAppointmentForStorage(appointment) {
     location: clean(appointment.location) || 'Not listed',
     transportation: 'Not listed',
     notes: clean(appointment.notes) || 'Not listed',
+    reminderBeforeMinutes: Number(appointment.reminderBeforeMinutes) || 30,
   };
 }
 
@@ -858,6 +947,32 @@ function formatStoredTime(time) {
     hour: 'numeric',
     minute: '2-digit',
   });
+}
+
+function getInputTimeValue(time) {
+  const match = String(time || '').match(/(\d{1,2})(?::(\d{2}))?\s?(am|pm)?/i);
+
+  if (!match) {
+    return '';
+  }
+
+  let hours = Number(match[1]);
+  const minutes = Number(match[2] || 0);
+  const meridiem = match[3]?.toLowerCase();
+
+  if (meridiem === 'pm' && hours < 12) {
+    hours += 12;
+  }
+
+  if (meridiem === 'am' && hours === 12) {
+    hours = 0;
+  }
+
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+function formatMinutesLabel(minutes) {
+  return Number(minutes) === 60 ? '1 hour' : `${minutes} minutes`;
 }
 
 function getMedicationTiming(times) {

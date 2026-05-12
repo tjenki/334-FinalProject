@@ -13,18 +13,33 @@ const emptyAppointment = {
   location: "",
   transportation: "",
   notes: "",
+  reminderBeforeMinutes: "30",
 };
 
 function AppointmentsPage() {
   const [appointments, setAppointments] = useState(() => removePastAppointments(loadAppointments()));
   const [newAppointment, setNewAppointment] = useState(emptyAppointment);
+  const [editingAppointmentId, setEditingAppointmentId] = useState(null);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
   const navigate = useNavigate();
+
+  const appointmentReminders = appointments.filter((appointment) =>
+    isAppointmentReminderDue(appointment, currentTime)
+  );
 
   useEffect(() => {
     const upcomingAppointments = removePastAppointments(appointments);
     localStorage.setItem(appointmentStorageKey, JSON.stringify(upcomingAppointments));
     window.dispatchEvent(new Event(dataChangeEvent));
   }, [appointments]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCurrentTime(new Date());
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -44,15 +59,30 @@ function AppointmentsPage() {
       return;
     }
 
-    setAppointments((currentAppointments) => [
-      ...currentAppointments,
-      {
-        ...appointment,
-        id: Date.now(),
-        confirmed: false,
-      },
-    ]);
+    if (editingAppointmentId) {
+      setAppointments((currentAppointments) =>
+        currentAppointments.map((currentAppointment) =>
+          currentAppointment.id === editingAppointmentId
+            ? {
+                ...currentAppointment,
+                ...appointment,
+              }
+            : currentAppointment
+        )
+      );
+    } else {
+      setAppointments((currentAppointments) => [
+        ...currentAppointments,
+        {
+          ...appointment,
+          id: Date.now(),
+          confirmed: false,
+        },
+      ]);
+    }
+
     setNewAppointment(emptyAppointment);
+    setEditingAppointmentId(null);
   }
 
   function removeAppointment(id) {
@@ -70,7 +100,36 @@ function AppointmentsPage() {
       location: "Main Street Clinic, Room 204",
       transportation: "Maria will drive",
       notes: "Bring medication list and insurance card.",
+      reminderBeforeMinutes: "30",
     });
+  }
+
+  function editAppointment(appointment) {
+    setEditingAppointmentId(appointment.id);
+    setNewAppointment({
+      provider: appointment.provider === "Appointment" ? "" : appointment.provider || "",
+      reason: appointment.reason === "Not listed" ? "" : appointment.reason || "",
+      date: appointment.rawDate || "",
+      time: appointment.rawTime || "",
+      location: appointment.location === "Not listed" ? "" : appointment.location || "",
+      transportation:
+        appointment.transportation === "Not listed" ? "" : appointment.transportation || "",
+      notes: appointment.notes === "Not listed" ? "" : appointment.notes || "",
+      reminderBeforeMinutes: String(appointment.reminderBeforeMinutes || 30),
+    });
+    window.requestAnimationFrame(() => {
+      document
+        .querySelector("#appointment-form-title")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function confirmAppointmentReminder(id) {
+    setAppointments((currentAppointments) =>
+      currentAppointments.map((appointment) =>
+        appointment.id === id ? { ...appointment, confirmed: true } : appointment
+      )
+    );
   }
 
   function handleLogout() {
@@ -103,9 +162,37 @@ function AppointmentsPage() {
       </header>
 
       <main id="main" className="app-shell">
+        {appointmentReminders.length > 0 && (
+          <section className="medicine-alert appointment-alert" aria-live="assertive" aria-labelledby="appointment-alert-title">
+            <div>
+              <p className="reminder-type">Appointment reminder</p>
+              <h2 id="appointment-alert-title">Time to get ready</h2>
+              <p>
+                {appointmentReminders
+                  .map((appointment) => `${appointment.provider} at ${appointment.time}`)
+                  .join(", ")}
+              </p>
+            </div>
+            <div className="alert-actions">
+              {appointmentReminders.map((appointment) => (
+                <button
+                  className="alert-button"
+                  type="button"
+                  key={appointment.id}
+                  onClick={() => confirmAppointmentReminder(appointment.id)}
+                >
+                  Got it
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="entry-panel" aria-labelledby="appointment-form-title">
           <div className="section-heading">
-            <h2 id="appointment-form-title">Add an appointment</h2>
+            <h2 id="appointment-form-title">
+              {editingAppointmentId ? "Edit appointment" : "Add an appointment"}
+            </h2>
             <p>Fill in what you know. Blank details will be saved as “Not listed.”</p>
           </div>
 
@@ -180,6 +267,20 @@ function AppointmentsPage() {
                   onChange={handleChange}
                 />
               </label>
+
+              <label htmlFor="reminderBeforeMinutes">
+                <span>Remind me before</span>
+                <select
+                  id="reminderBeforeMinutes"
+                  name="reminderBeforeMinutes"
+                  value={newAppointment.reminderBeforeMinutes}
+                  onChange={handleChange}
+                >
+                  <option value="15">15 minutes before</option>
+                  <option value="30">30 minutes before</option>
+                  <option value="60">1 hour before</option>
+                </select>
+              </label>
             </div>
 
             <label className="full-width" htmlFor="notes">
@@ -201,14 +302,17 @@ function AppointmentsPage() {
 
             <div className="action-row">
               <button className="primary-button" type="submit">
-                Save appointment
+                {editingAppointmentId ? "Save changes" : "Save appointment"}
               </button>
               <button
                 className="secondary-button"
                 type="button"
-                onClick={() => setNewAppointment(emptyAppointment)}
+                onClick={() => {
+                  setNewAppointment(emptyAppointment);
+                  setEditingAppointmentId(null);
+                }}
               >
-                Clear form
+                {editingAppointmentId ? "Cancel edit" : "Clear form"}
               </button>
               <button className="secondary-button" type="button" onClick={fillSampleAppointment}>
                 Fill sample
@@ -241,14 +345,24 @@ function AppointmentsPage() {
                       <h3>{appointment.provider}</h3>
                       <p className="med-purpose">Reason: {appointment.reason}</p>
                     </div>
-                    <button
-                      className="delete-button"
-                      type="button"
-                      aria-label={`Remove appointment with ${appointment.provider}`}
-                      onClick={() => removeAppointment(appointment.id)}
-                    >
-                      Remove
-                    </button>
+                    <div className="card-actions">
+                      <button
+                        className="delete-button"
+                        type="button"
+                        aria-label={`Edit appointment with ${appointment.provider}`}
+                        onClick={() => editAppointment(appointment)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="delete-button"
+                        type="button"
+                        aria-label={`Remove appointment with ${appointment.provider}`}
+                        onClick={() => removeAppointment(appointment.id)}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                   <dl>
                     <div>
@@ -270,6 +384,10 @@ function AppointmentsPage() {
                     <div>
                       <dt>Notes</dt>
                       <dd>{appointment.notes}</dd>
+                    </div>
+                    <div>
+                      <dt>Reminder</dt>
+                      <dd>{formatMinutesLabel(appointment.reminderBeforeMinutes || 30)} before</dd>
                     </div>
                   </dl>
                 </li>
@@ -293,7 +411,22 @@ function normalizeAppointment(appointment) {
     location: clean(appointment.location) || "Not listed",
     transportation: clean(appointment.transportation) || "Not listed",
     notes: clean(appointment.notes) || "Not listed",
+    reminderBeforeMinutes: Number(appointment.reminderBeforeMinutes) || 30,
   };
+}
+
+function isAppointmentReminderDue(appointment, now = new Date()) {
+  if (appointment.confirmed || !appointment.rawDate || !appointment.rawTime) {
+    return false;
+  }
+
+  const appointmentDate = new Date(`${appointment.rawDate}T${appointment.rawTime}`);
+  const reminderDate = new Date(appointmentDate);
+  reminderDate.setMinutes(
+    reminderDate.getMinutes() - Number(appointment.reminderBeforeMinutes || 30)
+  );
+
+  return now >= reminderDate && now <= appointmentDate;
 }
 
 function removePastAppointments(appointments) {
@@ -348,6 +481,10 @@ function loadAppointments() {
   } catch {
     return [];
   }
+}
+
+function formatMinutesLabel(minutes) {
+  return Number(minutes) === 60 ? "1 hour" : `${minutes} minutes`;
 }
 
 export default AppointmentsPage;
