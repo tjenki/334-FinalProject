@@ -141,7 +141,7 @@ function Homepage() {
     <Link to="/home" className="nav-tab active">Home</Link>
     <Link to="/medications" className="nav-tab">Medications</Link>
     <Link to="/appointments" className="nav-tab">Appointments</Link>
-    <Link to="/tasks" className="nav-tab">Tasks</Link>
+    <Link to="/tasks" className="nav-tab">Settings</Link>
     <button onClick={handleLogout} className="logout-button">
   Log Out
 </button>

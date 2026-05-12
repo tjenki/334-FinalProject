@@ -3,7 +3,7 @@ import LoginPage from "./pages/LoginPage";
 import Homepage from "./Homepage";
 import MedicationsPage from './pages/MedicationsPage';
 import AppointmentsPage from './pages/AppointmentsPage';
-import TasksPage from './pages/TasksPage';
+import SettingsPage from './pages/SettingsPage';
 
 export default function AppRoutes() {
   return (
@@ -12,7 +12,7 @@ export default function AppRoutes() {
       <Route path="/home" element={<Homepage />} />
       <Route path="/medications" element={<MedicationsPage />} />
       <Route path="/appointments" element={<AppointmentsPage />} />
-      <Route path="/tasks" element={<TasksPage />} />
+      <Route path="/tasks" element={<SettingsPage />} />
     </Routes>
   );
 }
@@ -26,7 +26,7 @@ export default function AppRoutes() {
 //       <Route path="/home" element={<Homepage />} />
 //       <Route path="/medications" element={<MedicationsPage />} />
 //       <Route path="/appointments" element={<AppointmentsPage />} />
-//       <Route path="/tasks" element={<TasksPage />} />
+//       <Route path="/tasks" element={<SettingsPage />} />
 //     </Routes>
 //   );
 // }

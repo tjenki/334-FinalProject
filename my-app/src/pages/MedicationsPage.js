@@ -164,7 +164,7 @@ function MedicationsPage() {
               Medications
             </Link>
             <Link to="/appointments">Appointments</Link>
-            <Link to="/tasks">Tasks</Link>
+            <Link to="/tasks">Settings</Link>
           </nav>
         </div>
         <button className="secondary-button" type="button" onClick={() => window.print()}>

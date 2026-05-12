@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-function TasksPage() {
+function SettingsPage() {
   return (
     <div>
       <header className="hero">
@@ -8,7 +8,7 @@ function TasksPage() {
           <div>
             <h1 className="eyebrow">
               <Link to="/" className="title-link-medication-page">
-                Tasks
+                Settings
               </Link>
             </h1>
 
@@ -20,4 +20,4 @@ function TasksPage() {
   );
 }
 
-export default TasksPage;
+export default SettingsPage;
