@@ -69,7 +69,7 @@ body.accessibility-high-contrast .homepage {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  background: #dfeadf;
+  background: var(--user-color-soft, #dfeadf);
   border-bottom: 1px solid #c8d6cb;
   padding: 2rem clamp(1rem, 4vw, 3rem);
 }
@@ -88,7 +88,7 @@ body.accessibility-high-contrast .hero {
 
 .eyebrow {
   margin: 0;
-  color: #0f4f43;
+  color: var(--user-color-dark, #0f4f43);
   font-size: clamp(2.2rem, 6vw, 4rem);
   font-weight: 800;
   line-height: 1.05;
@@ -108,7 +108,7 @@ body.accessibility-high-contrast .hero {
 .today-summary {
   min-width: 14rem;
   background: #ffffff;
-  border: 2px solid #176b5b;
+  border: 2px solid var(--user-color, #176b5b);
   border-radius: 8px;
   padding: 1rem 1.25rem;
   text-align: center;
@@ -124,7 +124,7 @@ body.accessibility-high-contrast .nav-tab {
 
 .today-summary span {
   display: block;
-  color: #0f4f43;
+  color: var(--user-color-dark, #0f4f43);
   font-size: 3rem;
   font-weight: 800;
   line-height: 1;
@@ -162,15 +162,17 @@ body.accessibility-high-contrast .nav-tab {
 
 .nav-tab:hover,
 .nav-tab.active {
-  background: #0f4f43;
-  border-color: #0f4f43;
+  background: var(--user-color-dark, #0f4f43);
+  border-color: var(--user-color-dark, #0f4f43);
   color: #ffffff;
 }
 
 body.accessibility-high-contrast .nav-tab:hover,
 body.accessibility-high-contrast .nav-tab.active,
 body.accessibility-high-contrast .confirmation-button,
-body.accessibility-high-contrast .primary-button {
+body.accessibility-high-contrast .primary-button,
+body.accessibility-high-contrast .alert-link,
+body.accessibility-high-contrast .alert-button {
   background: #003f88;
   color: #ffffff;
 }
@@ -182,6 +184,74 @@ body.accessibility-high-contrast .primary-button {
   max-width: 1180px;
   margin: 0 auto;
   padding: 1.5rem clamp(1rem, 4vw, 3rem) 3rem;
+}
+
+.medicine-alert {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  background: #fff7e8;
+  border: 4px solid #c35b36;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(23, 33, 27, 0.14);
+  padding: 1.25rem;
+}
+
+.medicine-alert h2 {
+  margin: 0 0 0.35rem;
+  color: #6b2614;
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.medicine-alert p {
+  margin-bottom: 0;
+  font-weight: 800;
+}
+
+.alert-link {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  background: #c35b36;
+  color: #ffffff;
+  font-weight: 800;
+  padding: 0.8rem 1rem;
+  text-decoration: none;
+}
+
+.alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.alert-button {
+  min-height: 48px;
+  border: 2px solid #c35b36;
+  border-radius: 8px;
+  background: #c35b36;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0.8rem 1rem;
+}
+
+.secondary-alert-button {
+  background: #ffffff;
+  color: #6b2614;
+}
+
+body.accessibility-high-contrast .medicine-alert {
+  background: #ffffff;
+  border-color: #000000;
+  box-shadow: none;
 }
 
 .app-section {
@@ -232,14 +302,14 @@ body.accessibility-high-contrast .primary-button {
   gap: 1rem;
   background: #ffffff;
   border: 2px solid #c8d6cb;
-  border-left: 8px solid #c35b36;
+  border-left: 8px solid var(--user-color, #c35b36);
   border-radius: 8px;
   padding: 1rem;
 }
 
 .reminder-card.is-confirmed {
-  background: #f0f8f6;
-  border-color: #176b5b;
+  background: var(--user-color-soft, #f0f8f6);
+  border-color: var(--user-color, #176b5b);
 }
 
 .reminder-card h3 {
@@ -254,7 +324,7 @@ body.accessibility-high-contrast .primary-button {
 }
 
 .reminder-time {
-  color: #0f4f43;
+  color: var(--user-color-dark, #0f4f43);
   font-weight: 800;
 }
 
@@ -270,23 +340,23 @@ body.accessibility-high-contrast .primary-button {
 
 .confirmation-button {
   min-width: 9rem;
-  background: #176b5b;
+  background: var(--user-color, #176b5b);
   color: #ffffff;
 }
 
 .confirmation-button:hover,
 .primary-button:hover {
-  background: #0f4f43;
+  background: var(--user-color-dark, #0f4f43);
 }
 
 .is-confirmed .confirmation-button {
-  background: #0f4f43;
+  background: var(--user-color-dark, #0f4f43);
 }
 
 .primary-button {
   width: 100%;
   margin-top: 0.5rem;
-  background: #176b5b;
+  background: var(--user-color, #176b5b);
   color: #ffffff;
 }
 
@@ -317,10 +387,10 @@ body.accessibility-high-contrast .primary-button {
 
 .logout-button {
   min-height: 48px;
-  border: 2px solid #e4a28d;
+  border: 2px solid var(--user-color-dark, #0f4f43);
   border-radius: 8px;
-  background: #fde9e1;
-  color: #6b2614;
+  background: var(--user-color, #176b5b);
+  color: #ffffff;
   cursor: pointer;
   font-weight: 800;
   padding: 0.65rem 1rem;
@@ -358,21 +428,17 @@ body.accessibility-focus-mode .add-reminder {
   }
 
   .nav-tab,
-  .confirmation-button {
+  .confirmation-button,
+  .alert-link,
+  .alert-button {
     width: 100%;
   }
-}
-.logout-button {
-  min-height: 48px;
-  border: 0;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 800;
-  padding: 0.65rem 1rem;
-  background: #176b5b;
-  color: #ffffff;
-}
 
+  .medicine-alert {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
 .logout-button:hover {
-  background: #0f4f43;
+  background: var(--user-color-dark, #0f4f43);
 }

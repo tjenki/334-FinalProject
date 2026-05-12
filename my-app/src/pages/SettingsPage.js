@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   clampTextSizeLevel,
+  cleanColor,
   loadAccessibilitySettings,
   saveAccessibilitySettings,
 } from "../accessibilitySettings";
@@ -31,11 +32,22 @@ function SettingsPage() {
     saveAccessibilitySettings(nextSettings);
   }
 
+  function changePageColor(event) {
+    const nextSettings = {
+      ...settings,
+      pageColor: cleanColor(event.target.value),
+    };
+
+    setSettings(nextSettings);
+    saveAccessibilitySettings(nextSettings);
+  }
+
   function resetSettings() {
     const nextSettings = {
       textSizeLevel: 0,
       highContrast: false,
       focusMode: false,
+      pageColor: "#176b5b",
     };
 
     setSettings(nextSettings);
@@ -56,7 +68,6 @@ function SettingsPage() {
       <header className="app-header">
         <div>
           <h1>Settings</h1>
-          <p className="intro">Choose display modes that stay on across the app.</p>
           <nav className="med-nav" aria-label="Main pages">
             <Link to="/home">Home</Link>
             <Link to="/medications">Medications</Link>
@@ -104,6 +115,23 @@ function SettingsPage() {
                 >
                   +
                 </button>
+              </div>
+            </div>
+
+            <div className="setting-row">
+              <div>
+                <h3>Page color</h3>
+                <p>Pick a color for headers, active buttons, and highlights.</p>
+              </div>
+              <div className="color-controls">
+                <label htmlFor="pageColor">Choose color</label>
+                <input
+                  id="pageColor"
+                  name="pageColor"
+                  type="color"
+                  value={settings.pageColor}
+                  onChange={changePageColor}
+                />
               </div>
             </div>
 

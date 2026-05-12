@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { startMedicineAlarm, stopMedicineAlarm } from "../medicineAlarm";
 import "./styles.css";
 
 const storageKey = "easy-med-schedule";
+const dataChangeEvent = "everyday-tracker-data-change";
 const tesseractScriptUrl = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
 let tesseractLoadPromise;
 
@@ -20,14 +22,55 @@ function MedicationsPage() {
   const [medications, setMedications] = useState(() => loadMedications());
   const [newMedication, setNewMedication] = useState(emptyMedication);
   const [entryMode, setEntryMode] = useState("manual");
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [soundBlocked, setSoundBlocked] = useState(false);
   const [ocrStatus, setOcrStatus] = useState(
     "After choosing a photo, OCR will try to read the label. Check the filled fields before saving."
   );
   const navigate = useNavigate();
 
+  const dueMedications = medications.filter((medication) => isMedicationDue(medication, currentTime));
+  const dueMedicationMessage = dueMedications
+    .map((medication) => `${medication.name}-${medication.times}`)
+    .join("|");
+
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(medications));
+    window.dispatchEvent(new Event(dataChangeEvent));
   }, [medications]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCurrentTime(new Date());
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    if (dueMedications.length === 0) {
+      stopMedicineAlarm();
+      setSoundBlocked(false);
+      return undefined;
+    }
+
+    startMedicineAlarm().then((didStart) => {
+      if (isCurrent) {
+        setSoundBlocked(!didStart);
+      }
+    });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [dueMedicationMessage, dueMedications.length]);
+
+  async function handleEnableSound() {
+    const didStart = await startMedicineAlarm();
+    setSoundBlocked(!didStart);
+  }
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -52,6 +95,8 @@ function MedicationsPage() {
       {
         ...medication,
         id: Date.now(),
+        confirmed: false,
+        confirmedDate: "",
       },
     ]);
     setNewMedication(emptyMedication);
@@ -60,6 +105,20 @@ function MedicationsPage() {
   function removeMedication(id) {
     setMedications((currentMedications) =>
       currentMedications.filter((medication) => medication.id !== id)
+    );
+  }
+
+  function confirmMedicationTaken(id) {
+    setMedications((currentMedications) =>
+      currentMedications.map((medication) =>
+        medication.id === id
+          ? {
+              ...medication,
+              confirmed: true,
+              confirmedDate: getTodayKey(),
+            }
+          : medication
+      )
     );
   }
 
@@ -163,6 +222,38 @@ function MedicationsPage() {
       </header>
 
       <main id="main" className="app-shell">
+        {dueMedications.length > 0 && (
+          <section className="medicine-alert" aria-live="assertive" aria-labelledby="medicine-alert-title">
+            <div>
+              <p className="reminder-type">Medicine due now</p>
+              <h2 id="medicine-alert-title">Time to take your medicine</h2>
+              <p>
+                {dueMedications
+                  .map((medication) => `${medication.name} at ${getMedicationTiming(medication.times).displayDose?.label || medication.times}`)
+                  .join(", ")}
+              </p>
+            </div>
+            <div className="alert-actions">
+              <button className="alert-button" type="button" onClick={handleEnableSound}>
+                {soundBlocked ? "Enable sound" : "Ring again"}
+              </button>
+              <button className="alert-button secondary-alert-button" type="button" onClick={stopMedicineAlarm}>
+                Stop sound
+              </button>
+              {dueMedications.map((medication) => (
+                <button
+                  className="alert-button"
+                  type="button"
+                  key={medication.id}
+                  onClick={() => confirmMedicationTaken(medication.id)}
+                >
+                  I took {medication.name}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="entry-panel" aria-labelledby="form-title">
           <div className="section-heading">
             <h2 id="form-title">Add a medication</h2>
@@ -337,11 +428,17 @@ function MedicationsPage() {
           ) : (
             <ul className="med-list" aria-live="polite">
               {medications.map((medication) => (
-                <li className="med-card" key={medication.id}>
+                <li
+                  className={`med-card ${isMedicationDue(medication, currentTime) ? "is-due" : ""}`}
+                  key={medication.id}
+                >
                   <div className="med-card-header">
                     <div>
                       <h3>{medication.name}</h3>
                       <p className="med-purpose">For: {medication.purpose}</p>
+                      {isMedicationDue(medication, currentTime) && (
+                        <p className="due-label">Due now</p>
+                      )}
                     </div>
                     <button
                       className="delete-button"
@@ -351,6 +448,15 @@ function MedicationsPage() {
                     >
                       Remove
                     </button>
+                    {isMedicationDue(medication, currentTime) && (
+                      <button
+                        className="primary-button"
+                        type="button"
+                        onClick={() => confirmMedicationTaken(medication.id)}
+                      >
+                        I took it
+                      </button>
+                    )}
                   </div>
                   <dl>
                     <div>
@@ -425,6 +531,99 @@ function loadTesseract() {
   }
 
   return tesseractLoadPromise;
+}
+
+function isMedicationDue(medication, now = new Date()) {
+  if (isConfirmedToday(medication)) {
+    return false;
+  }
+
+  return Boolean(getMedicationTiming(medication.times, now).dueDose);
+}
+
+function getMedicationTiming(times, now = new Date()) {
+  const parsedTimes = parseMedicationTimes(times);
+
+  if (parsedTimes.length === 0) {
+    return {
+      dueDose: null,
+      nextDose: null,
+      displayDose: null,
+    };
+  }
+
+  const todayDoses = parsedTimes
+    .map((time) => {
+      const date = new Date();
+      date.setHours(time.hours, time.minutes, 0, 0);
+      return {
+        date,
+        label: formatDoseTime(date),
+      };
+    })
+    .sort((firstDose, secondDose) => firstDose.date - secondDose.date);
+
+  const dueDoses = todayDoses.filter((dose) => dose.date <= now);
+  const dueDose = dueDoses[dueDoses.length - 1] || null;
+  const nextDose = todayDoses.find((dose) => dose.date > now) || null;
+
+  return {
+    dueDose,
+    nextDose,
+    displayDose: dueDose || nextDose || todayDoses[todayDoses.length - 1],
+  };
+}
+
+function parseMedicationTimes(times) {
+  const matches = String(times || "").match(/\d{1,2}(:\d{2})?\s?(am|pm)?/gi) || [];
+
+  return matches
+    .map((value) => {
+      const match = value.trim().match(/^(\d{1,2})(?::(\d{2}))?\s?(am|pm)?$/i);
+
+      if (!match) {
+        return null;
+      }
+
+      let hours = Number(match[1]);
+      const minutes = Number(match[2] || 0);
+      const meridiem = match[3]?.toLowerCase();
+
+      if (meridiem === "pm" && hours < 12) {
+        hours += 12;
+      }
+
+      if (meridiem === "am" && hours === 12) {
+        hours = 0;
+      }
+
+      if (hours > 23 || minutes > 59) {
+        return null;
+      }
+
+      return { hours, minutes };
+    })
+    .filter(Boolean);
+}
+
+function formatDoseTime(date) {
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function isConfirmedToday(medication) {
+  return Boolean(medication.confirmed && medication.confirmedDate === getTodayKey());
+}
+
+function getTodayKey() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 export default MedicationsPage;
