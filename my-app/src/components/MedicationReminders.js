@@ -5,7 +5,7 @@ function MedicationReminders({ medications, onConfirm, onEdit }) {
     <section className="app-section medication-reminders-section" aria-labelledby="medication-heading">
       <div className="section-heading">
         <p>Medication</p>
-        <h2 id="medication-heading">Today&apos;s medicine</h2>
+        <h2 id="medication-heading">Prescriptions</h2>
       </div>
 
       <div className="reminder-list">

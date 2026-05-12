@@ -21,6 +21,7 @@ const dataChangeEvent = 'everyday-tracker-data-change';
 
 const emptyTask = {
   title: '',
+  date: '',
   time: '',
   details: '',
 };
@@ -30,6 +31,7 @@ const emptyMedication = {
   purpose: '',
   dosage: '',
   frequency: 'Once daily',
+  date: '',
   time: '',
   instructions: '',
   reminderDelayMinutes: '30',
@@ -189,21 +191,6 @@ function Homepage() {
     setActiveQuickForm((currentForm) => (currentForm === formName ? '' : formName));
   }
 
-  function formatTime(time) {
-    if (!time) {
-      return 'Any time today';
-    }
-
-    const [hours, minutes] = time.split(':');
-    const date = new Date();
-    date.setHours(Number(hours), Number(minutes));
-
-    return date.toLocaleTimeString([], {
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  }
-
   function handleAddTask(event) {
     event.preventDefault();
 
@@ -211,7 +198,9 @@ function Homepage() {
       id: editingTaskId || Date.now(),
       title: newTask.title,
       name: newTask.title,
-      time: formatTime(newTask.time),
+      date: formatDate(newTask.date) || '',
+      rawDate: clean(newTask.date),
+      time: formatReminderDateTime(newTask.date, newTask.time),
       details: newTask.details || 'No extra notes added.',
       instructions: newTask.details || 'No extra instructions added.',
       confirmed: false,
@@ -265,6 +254,7 @@ function Homepage() {
     setEditingTaskId(taskId);
     setNewTask({
       title: task.title || task.name || '',
+      date: task.rawDate || '',
       time: getInputTimeValue(task.time),
       details: task.details || '',
     });
@@ -456,6 +446,15 @@ function Homepage() {
                 onChange={handleMedicationChange}
               />
 
+              <label htmlFor="quick-medication-date">Date</label>
+              <input
+                id="quick-medication-date"
+                name="date"
+                type="date"
+                value={newMedication.date}
+                onChange={handleMedicationChange}
+              />
+
               <label htmlFor="quick-medication-instructions">Instructions</label>
               <textarea
                 id="quick-medication-instructions"
@@ -622,6 +621,15 @@ function Homepage() {
                 onChange={handleTaskChange}
               />
 
+              <label htmlFor="task-date">Date</label>
+              <input
+                id="task-date"
+                name="date"
+                type="date"
+                value={newTask.date}
+                onChange={handleTaskChange}
+              />
+
               <label htmlFor="task-details">Helpful note</label>
               <textarea
                 id="task-details"
@@ -699,7 +707,10 @@ function loadStoredMedications() {
         id: medication.id,
         name: medication.name,
         title: medication.name,
-        time: timing.displayDose?.label || medication.times || 'Time not listed',
+        time: formatReminderDateTime(
+          medication.rawDate,
+          timing.displayDose?.label || medication.times || ''
+        ),
         instructions: medication.instructions || 'No instructions listed.',
         details: isDue
           ? `DUE NOW: ${medication.instructions || 'Take as instructed.'}`
@@ -744,7 +755,9 @@ function loadStoredTasks() {
     id: task.id,
     title: task.title || task.name || 'Task',
     name: task.name || task.title || 'Task',
-    time: task.time || 'Any time today',
+    date: task.date || '',
+    rawDate: task.rawDate || '',
+    time: formatReminderDateTime(task.rawDate, task.time),
     details: task.details || 'No extra notes added.',
     instructions: task.instructions || task.details || 'No extra instructions added.',
     confirmed: Boolean(task.confirmed),
@@ -755,11 +768,13 @@ function loadStoredTasks() {
 }
 
 function getDailyChecklistItems(reminders) {
-  const medicationItems = reminders.medications.map((medication) => ({
-    ...medication,
-    category: 'medications',
-    type: medication.isDue ? 'Medicine due now' : 'Medicine',
-  }));
+  const medicationItems = reminders.medications
+    .filter((medication) => isReminderForToday(medication))
+    .map((medication) => ({
+      ...medication,
+      category: 'medications',
+      type: medication.isDue ? 'Medicine due now' : 'Medicine',
+    }));
 
   const appointmentItems = reminders.appointments
     .filter((appointment) => isAppointmentForToday(appointment))
@@ -769,12 +784,14 @@ function getDailyChecklistItems(reminders) {
       type: 'Appointment',
     }));
 
-  const taskItems = reminders.tasks.map((task) => ({
-    ...task,
-    category: 'tasks',
-    type: 'Task reminder',
-    sortTime: getSortTime(task.time),
-  }));
+  const taskItems = reminders.tasks
+    .filter((task) => isReminderForToday(task))
+    .map((task) => ({
+      ...task,
+      category: 'tasks',
+      type: 'Task reminder',
+      sortTime: getSortTime(task.time),
+    }));
 
   return [...medicationItems, ...appointmentItems, ...taskItems].sort(
     (firstItem, secondItem) => firstItem.sortTime - secondItem.sortTime
@@ -787,6 +804,14 @@ function isAppointmentForToday(appointment) {
   }
 
   return appointment.rawDate === getTodayKey();
+}
+
+function isReminderForToday(reminder) {
+  if (!reminder.rawDate) {
+    return true;
+  }
+
+  return reminder.rawDate === getTodayKey();
 }
 
 function getSortTime(time) {
@@ -893,6 +918,8 @@ function normalizeMedicationForStorage(medication) {
     dosage: clean(medication.dosage) || 'Not listed',
     frequency: clean(medication.frequency) || 'Not listed',
     times: clean(medication.time) ? formatStoredTime(medication.time) : 'Not listed',
+    rawDate: clean(medication.date),
+    date: formatDate(medication.date) || '',
     instructions: clean(medication.instructions) || 'Not listed',
     sideEffects: 'Not listed',
     reminderDelayMinutes: Number(medication.reminderDelayMinutes) || 30,
@@ -931,6 +958,13 @@ function formatDate(value) {
     day: 'numeric',
     year: 'numeric',
   });
+}
+
+function formatReminderDateTime(date, time) {
+  const formattedDate = formatDate(date);
+  const formattedTime = time || 'Any time today';
+
+  return [formattedDate, formattedTime].filter(Boolean).join(' at ');
 }
 
 function formatStoredTime(time) {
