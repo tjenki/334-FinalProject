@@ -250,6 +250,11 @@ body.accessibility-high-contrast .alert-button {
   text-decoration: none;
 }
 
+.task-create-button {
+  cursor: pointer;
+  font: inherit;
+}
+
 .alert-link:hover {
   background: var(--user-color-dark, #0f4f43);
 }
@@ -411,15 +416,24 @@ body.accessibility-high-contrast .medicine-alert {
   color: #ffffff;
 }
 
+.quick-entry-form {
+  grid-column: 1 / -1;
+}
+
+.quick-entry-form form,
 .add-reminder form {
   display: grid;
   gap: 0.75rem;
 }
 
+.quick-entry-form label,
 .add-reminder label {
   font-weight: 800;
 }
 
+.quick-entry-form input,
+.quick-entry-form select,
+.quick-entry-form textarea,
 .add-reminder input,
 .add-reminder select,
 .add-reminder textarea {
@@ -431,9 +445,32 @@ body.accessibility-high-contrast .medicine-alert {
   padding: 0.75rem;
 }
 
+.quick-entry-form textarea,
 .add-reminder textarea {
   min-height: 6rem;
   resize: vertical;
+}
+
+.task-form-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.secondary-task-button {
+  min-height: 48px;
+  border: 2px solid var(--user-color-dark, #0f4f43);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--user-color-dark, #0f4f43);
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0.8rem 1rem;
+}
+
+.secondary-task-button:hover {
+  background: var(--user-color-soft, #dfeadf);
 }
 
 body .add-reminder {
@@ -491,7 +528,9 @@ body.accessibility-focus-mode .focus-create-links {
   .confirmation-button,
   .delete-reminder-button,
   .alert-link,
-  .alert-button {
+  .alert-button,
+  .task-create-button,
+  .secondary-task-button {
     width: 100%;
   }
 
@@ -503,6 +542,10 @@ body.accessibility-focus-mode .focus-create-links {
   .focus-create-links {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .task-form-actions {
+    grid-template-columns: 1fr;
   }
 }
 .logout-button:hover {

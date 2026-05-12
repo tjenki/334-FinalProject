@@ -1,6 +1,5 @@
 import './Homepage.css';
 import { useEffect, useMemo, useState } from 'react';
-import AddReminderForm from './components/AddReminderForm';
 import AppointmentReminders from './components/AppointmentReminders';
 import MedicationReminders from './components/MedicationReminders';
 import TaskReminders from './components/TaskReminders';
@@ -17,13 +16,31 @@ const initialReminders = {
 
 const medicationStorageKey = 'easy-med-schedule';
 const appointmentStorageKey = 'everyday-tracker-appointments';
+const taskStorageKey = 'everyday-tracker-tasks';
 const dataChangeEvent = 'everyday-tracker-data-change';
 
-const emptyReminder = {
+const emptyTask = {
   title: '',
   time: '',
-  category: 'tasks',
   details: '',
+};
+
+const emptyMedication = {
+  name: '',
+  purpose: '',
+  dosage: '',
+  frequency: 'Once daily',
+  time: '',
+  instructions: '',
+};
+
+const emptyAppointment = {
+  provider: '',
+  reason: '',
+  date: '',
+  time: '',
+  location: '',
+  notes: '',
 };
 
 
@@ -31,15 +48,15 @@ function Homepage() {
   const navigate = useNavigate();
   const username = localStorage.getItem("username");
   const [reminders, setReminders] = useState(() => loadStoredReminders());
-  const [newReminder, setNewReminder] = useState(emptyReminder);
+  const [newTask, setNewTask] = useState(emptyTask);
+  const [newMedication, setNewMedication] = useState(emptyMedication);
+  const [newAppointment, setNewAppointment] = useState(emptyAppointment);
+  const [activeQuickForm, setActiveQuickForm] = useState('');
   const [soundBlocked, setSoundBlocked] = useState(false);
 
   useEffect(() => {
     function refreshReminders() {
-      setReminders((currentReminders) => ({
-        ...loadStoredReminders(),
-        tasks: currentReminders.tasks,
-      }));
+      setReminders(loadStoredReminders());
     }
 
     const refreshTimer = window.setInterval(refreshReminders, 5000);
@@ -122,6 +139,10 @@ function Homepage() {
     if (category === 'appointments') {
       toggleStoredItemConfirmed(appointmentStorageKey, reminderId);
     }
+
+    if (category === 'tasks') {
+      toggleStoredItemConfirmed(taskStorageKey, reminderId);
+    }
   }
 
   function handleDeleteAppointment(reminderId) {
@@ -134,13 +155,35 @@ function Homepage() {
     deleteStoredItem(appointmentStorageKey, reminderId);
   }
 
-  function handleReminderChange(event) {
+  function handleTaskChange(event) {
     const { name, value } = event.target;
 
-    setNewReminder((currentReminder) => ({
-      ...currentReminder,
+    setNewTask((currentTask) => ({
+      ...currentTask,
       [name]: value,
     }));
+  }
+
+  function handleMedicationChange(event) {
+    const { name, value } = event.target;
+
+    setNewMedication((currentMedication) => ({
+      ...currentMedication,
+      [name]: value,
+    }));
+  }
+
+  function handleAppointmentChange(event) {
+    const { name, value } = event.target;
+
+    setNewAppointment((currentAppointment) => ({
+      ...currentAppointment,
+      [name]: value,
+    }));
+  }
+
+  function showQuickForm(formName) {
+    setActiveQuickForm((currentForm) => (currentForm === formName ? '' : formName));
   }
 
   function formatTime(time) {
@@ -158,36 +201,72 @@ function Homepage() {
     });
   }
 
-  function handleAddReminder(event) {
+  function handleAddTask(event) {
     event.preventDefault();
 
-    const reminderToAdd = {
+    const taskToAdd = {
       id: Date.now(),
-      title: newReminder.title,
-      name: newReminder.title,
-      time: formatTime(newReminder.time),
-      details: newReminder.details || 'No extra notes added.',
-      instructions: newReminder.details || 'No extra instructions added.',
+      title: newTask.title,
+      name: newTask.title,
+      time: formatTime(newTask.time),
+      details: newTask.details || 'No extra notes added.',
+      instructions: newTask.details || 'No extra instructions added.',
       confirmed: false,
+      category: 'tasks',
     };
 
     setReminders((currentReminders) => ({
       ...currentReminders,
-      [newReminder.category]: [
-        ...currentReminders[newReminder.category],
-        reminderToAdd,
-      ],
+      tasks: [...currentReminders.tasks, taskToAdd],
     }));
 
-    if (newReminder.category === 'medications') {
-      addStoredMedication(reminderToAdd);
+    saveStoredTask(taskToAdd);
+    setNewTask(emptyTask);
+    setActiveQuickForm('');
+  }
+
+  function handleAddMedication(event) {
+    event.preventDefault();
+
+    const medicationToAdd = normalizeMedicationForStorage(newMedication);
+
+    if (!medicationToAdd.name) {
+      return;
     }
 
-    if (newReminder.category === 'appointments') {
-      addStoredAppointment(reminderToAdd);
+    const savedMedication = {
+      ...medicationToAdd,
+      id: Date.now(),
+      confirmed: false,
+      confirmedDate: '',
+      lastTakenAt: '',
+    };
+
+    saveStoredItem(medicationStorageKey, savedMedication);
+    setReminders(loadStoredReminders());
+    setNewMedication(emptyMedication);
+    setActiveQuickForm('');
+  }
+
+  function handleAddAppointment(event) {
+    event.preventDefault();
+
+    if (!clean(newAppointment.provider) && !clean(newAppointment.reason)) {
+      return;
     }
 
-    setNewReminder(emptyReminder);
+    const appointmentToAdd = normalizeAppointmentForStorage(newAppointment);
+
+    const savedAppointment = {
+      ...appointmentToAdd,
+      id: Date.now(),
+      confirmed: false,
+    };
+
+    saveStoredItem(appointmentStorageKey, savedAppointment);
+    setReminders(loadStoredReminders());
+    setNewAppointment(emptyAppointment);
+    setActiveQuickForm('');
   }
 
 
@@ -268,17 +347,263 @@ function Homepage() {
             <h2 id="focus-create-title">Add what you need</h2>
           </div>
           <div className="focus-create-actions">
-            <Link to="/medications" className="alert-link">
+            <button
+              className="alert-link task-create-button"
+              type="button"
+              onClick={() => showQuickForm('medication')}
+            >
               Add medication
-            </Link>
-            <Link to="/appointments" className="alert-link">
+            </button>
+            <button
+              className="alert-link task-create-button"
+              type="button"
+              onClick={() => showQuickForm('appointment')}
+            >
               Add appointment
-            </Link>
-            <a href="#add-reminder-heading" className="alert-link">
+            </button>
+            <button
+              className="alert-link task-create-button"
+              type="button"
+              onClick={() => showQuickForm('task')}
+            >
               Add task
-            </a>
+            </button>
           </div>
         </section>
+
+        {activeQuickForm === 'medication' && (
+          <section className="app-section quick-entry-form" aria-labelledby="quick-medication-title">
+            <div className="section-heading">
+              <p>Medication</p>
+              <h2 id="quick-medication-title">Add a medication</h2>
+            </div>
+
+            <form onSubmit={handleAddMedication}>
+              <label htmlFor="quick-medication-name">Medication name</label>
+              <input
+                id="quick-medication-name"
+                name="name"
+                type="text"
+                value={newMedication.name}
+                onChange={handleMedicationChange}
+                placeholder="Example: Lisinopril"
+                required
+              />
+
+              <label htmlFor="quick-medication-purpose">What it is for</label>
+              <input
+                id="quick-medication-purpose"
+                name="purpose"
+                type="text"
+                value={newMedication.purpose}
+                onChange={handleMedicationChange}
+                placeholder="Example: blood pressure"
+              />
+
+              <label htmlFor="quick-medication-dosage">Dosage</label>
+              <input
+                id="quick-medication-dosage"
+                name="dosage"
+                type="text"
+                value={newMedication.dosage}
+                onChange={handleMedicationChange}
+                placeholder="Example: 10 mg"
+              />
+
+              <label htmlFor="quick-medication-frequency">Frequency</label>
+              <select
+                id="quick-medication-frequency"
+                name="frequency"
+                value={newMedication.frequency}
+                onChange={handleMedicationChange}
+              >
+                <option>Once daily</option>
+                <option>Twice daily</option>
+                <option>Three times daily</option>
+                <option>Every other day</option>
+                <option>As needed</option>
+                <option>Custom</option>
+              </select>
+
+              <label htmlFor="quick-medication-time">Time</label>
+              <input
+                id="quick-medication-time"
+                name="time"
+                type="time"
+                value={newMedication.time}
+                onChange={handleMedicationChange}
+              />
+
+              <label htmlFor="quick-medication-instructions">Instructions</label>
+              <textarea
+                id="quick-medication-instructions"
+                name="instructions"
+                value={newMedication.instructions}
+                onChange={handleMedicationChange}
+                placeholder="Example: take with food"
+                rows="3"
+              />
+
+              <div className="task-form-actions">
+                <button className="primary-button" type="submit">
+                  Save medication
+                </button>
+                <button
+                  className="secondary-task-button"
+                  type="button"
+                  onClick={() => {
+                    setNewMedication(emptyMedication);
+                    setActiveQuickForm('');
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {activeQuickForm === 'appointment' && (
+          <section className="app-section quick-entry-form" aria-labelledby="quick-appointment-title">
+            <div className="section-heading">
+              <p>Appointment</p>
+              <h2 id="quick-appointment-title">Add an appointment</h2>
+            </div>
+
+            <form onSubmit={handleAddAppointment}>
+              <label htmlFor="quick-appointment-provider">Doctor, clinic, or provider</label>
+              <input
+                id="quick-appointment-provider"
+                name="provider"
+                type="text"
+                value={newAppointment.provider}
+                onChange={handleAppointmentChange}
+                placeholder="Example: Dr. Smith"
+              />
+
+              <label htmlFor="quick-appointment-reason">Reason for visit</label>
+              <input
+                id="quick-appointment-reason"
+                name="reason"
+                type="text"
+                value={newAppointment.reason}
+                onChange={handleAppointmentChange}
+                placeholder="Example: blood pressure check"
+              />
+
+              <label htmlFor="quick-appointment-date">Date</label>
+              <input
+                id="quick-appointment-date"
+                name="date"
+                type="date"
+                value={newAppointment.date}
+                onChange={handleAppointmentChange}
+              />
+
+              <label htmlFor="quick-appointment-time">Time</label>
+              <input
+                id="quick-appointment-time"
+                name="time"
+                type="time"
+                value={newAppointment.time}
+                onChange={handleAppointmentChange}
+              />
+
+              <label htmlFor="quick-appointment-location">Location</label>
+              <input
+                id="quick-appointment-location"
+                name="location"
+                type="text"
+                value={newAppointment.location}
+                onChange={handleAppointmentChange}
+                placeholder="Example: Main Street Clinic"
+              />
+
+              <label htmlFor="quick-appointment-notes">Helpful notes</label>
+              <textarea
+                id="quick-appointment-notes"
+                name="notes"
+                value={newAppointment.notes}
+                onChange={handleAppointmentChange}
+                placeholder="Example: bring insurance card"
+                rows="3"
+              />
+
+              <div className="task-form-actions">
+                <button className="primary-button" type="submit">
+                  Save appointment
+                </button>
+                <button
+                  className="secondary-task-button"
+                  type="button"
+                  onClick={() => {
+                    setNewAppointment(emptyAppointment);
+                    setActiveQuickForm('');
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {activeQuickForm === 'task' && (
+          <section className="app-section quick-entry-form" aria-labelledby="quick-task-title">
+            <div className="section-heading">
+              <p>Task</p>
+              <h2 id="quick-task-title">Add a task</h2>
+            </div>
+
+            <form onSubmit={handleAddTask}>
+              <label htmlFor="task-title">Task name</label>
+              <input
+                id="task-title"
+                name="title"
+                type="text"
+                value={newTask.title}
+                onChange={handleTaskChange}
+                placeholder="Example: Drink water"
+                required
+              />
+
+              <label htmlFor="task-time">Time</label>
+              <input
+                id="task-time"
+                name="time"
+                type="time"
+                value={newTask.time}
+                onChange={handleTaskChange}
+              />
+
+              <label htmlFor="task-details">Helpful note</label>
+              <textarea
+                id="task-details"
+                name="details"
+                value={newTask.details}
+                onChange={handleTaskChange}
+                placeholder="Add simple instructions"
+                rows="3"
+              />
+
+              <div className="task-form-actions">
+                <button className="primary-button" type="submit">
+                  Save task
+                </button>
+                <button
+                  className="secondary-task-button"
+                  type="button"
+                  onClick={() => {
+                    setNewTask(emptyTask);
+                    setActiveQuickForm('');
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
 
         <MedicationReminders
           medications={reminders.medications}
@@ -294,11 +619,6 @@ function Homepage() {
           onConfirm={handleConfirm}
           onDeleteAppointment={handleDeleteAppointment}
         />
-        <AddReminderForm
-          newReminder={newReminder}
-          onChange={handleReminderChange}
-          onSubmit={handleAddReminder}
-        />
       </main>
     </div>
   );
@@ -311,6 +631,7 @@ function loadStoredReminders() {
     ...initialReminders,
     medications: loadStoredMedications(),
     appointments: loadStoredAppointments(),
+    tasks: loadStoredTasks(),
   };
 }
 
@@ -356,6 +677,21 @@ function loadStoredAppointments() {
       rawDate: appointment.rawDate,
       sortTime: getSortTime(appointment.time),
     }));
+}
+
+function loadStoredTasks() {
+  return readStorageList(taskStorageKey).map((task) => ({
+    id: task.id,
+    title: task.title || task.name || 'Task',
+    name: task.name || task.title || 'Task',
+    time: task.time || 'Any time today',
+    details: task.details || 'No extra notes added.',
+    instructions: task.instructions || task.details || 'No extra instructions added.',
+    confirmed: Boolean(task.confirmed),
+    category: 'tasks',
+    type: 'Task reminder',
+    sortTime: getSortTime(task.time),
+  }));
 }
 
 function getDailyChecklistItems(reminders) {
@@ -439,6 +775,15 @@ function deleteStoredItem(key, id) {
   window.dispatchEvent(new Event(dataChangeEvent));
 }
 
+function saveStoredTask(task) {
+  saveStoredItem(taskStorageKey, task);
+}
+
+function saveStoredItem(key, item) {
+  localStorage.setItem(key, JSON.stringify([...readStorageList(key), item]));
+  window.dispatchEvent(new Event(dataChangeEvent));
+}
+
 function getToggledItem(key, item) {
   const nextConfirmed = !item.confirmed;
 
@@ -457,48 +802,62 @@ function getToggledItem(key, item) {
   };
 }
 
-function addStoredMedication(reminder) {
-  const medication = {
-    id: reminder.id,
-    name: reminder.name,
-    purpose: 'Not listed',
-    dosage: 'Not listed',
-    frequency: 'Custom',
-    times: reminder.time,
-    instructions: reminder.instructions,
+function normalizeMedicationForStorage(medication) {
+  return {
+    name: clean(medication.name),
+    purpose: clean(medication.purpose) || 'Not listed',
+    dosage: clean(medication.dosage) || 'Not listed',
+    frequency: clean(medication.frequency) || 'Not listed',
+    times: clean(medication.time) ? formatStoredTime(medication.time) : 'Not listed',
+    instructions: clean(medication.instructions) || 'Not listed',
     sideEffects: 'Not listed',
-    confirmed: false,
-    confirmedDate: '',
-    lastTakenAt: '',
   };
-
-  localStorage.setItem(
-    medicationStorageKey,
-    JSON.stringify([...readStorageList(medicationStorageKey), medication])
-  );
-  window.dispatchEvent(new Event(dataChangeEvent));
 }
 
-function addStoredAppointment(reminder) {
-  const appointment = {
-    id: reminder.id,
-    provider: reminder.title,
-    reason: reminder.details,
-    date: 'Not listed',
-    time: reminder.time,
-    rawDate: '',
-    rawTime: '',
-    location: 'Not listed',
+function normalizeAppointmentForStorage(appointment) {
+  return {
+    provider: clean(appointment.provider) || 'Appointment',
+    reason: clean(appointment.reason) || 'Not listed',
+    date: formatDate(appointment.date) || 'Not listed',
+    time: clean(appointment.time) ? formatStoredTime(appointment.time) : 'Not listed',
+    rawDate: clean(appointment.date),
+    rawTime: clean(appointment.time),
+    location: clean(appointment.location) || 'Not listed',
     transportation: 'Not listed',
-    notes: reminder.details,
-    confirmed: false,
+    notes: clean(appointment.notes) || 'Not listed',
   };
+}
 
-  localStorage.setItem(
-    appointmentStorageKey,
-    JSON.stringify([...readStorageList(appointmentStorageKey), appointment])
-  );
-  window.dispatchEvent(new Event(dataChangeEvent));
+function clean(value) {
+  return String(value || '').trim();
+}
+
+function formatDate(value) {
+  if (!value) {
+    return '';
+  }
+
+  return new Date(`${value}T12:00:00`).toLocaleDateString([], {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function formatStoredTime(time) {
+  if (!time) {
+    return '';
+  }
+
+  const [hours, minutes] = time.split(':');
+  const date = new Date();
+  date.setHours(Number(hours), Number(minutes));
+
+  return date.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 function getMedicationTiming(times) {
