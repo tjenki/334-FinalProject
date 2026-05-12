@@ -16,6 +16,8 @@ const emptyMedication = {
   times: "",
   instructions: "",
   sideEffects: "",
+  refillsLeft: "",
+  prescriptionExpires: "",
   reminderDelayMinutes: "30",
 };
 
@@ -34,9 +36,7 @@ function MedicationsPage() {
   const [selectedPhotoName, setSelectedPhotoName] = useState("");
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState("");
-  const [ocrStatus, setOcrStatus] = useState(
-    "After choosing a photo, OCR will try to read the label. Check the filled fields before saving."
-  );
+  const [ocrStatus, setOcrStatus] = useState("");
   const navigate = useNavigate();
 
   const dueMedications = medications.filter((medication) => isMedicationDue(medication, currentTime));
@@ -123,6 +123,7 @@ function MedicationsPage() {
         {
           ...medication,
           id: Date.now(),
+          createdAt: new Date().toISOString(),
           confirmed: false,
           confirmedDate: "",
           lastTakenAt: "",
@@ -196,24 +197,13 @@ function MedicationsPage() {
       times: medication.times === "Not listed" ? "" : medication.times || "",
       instructions: medication.instructions === "Not listed" ? "" : medication.instructions || "",
       sideEffects: medication.sideEffects === "Not listed" ? "" : medication.sideEffects || "",
+      refillsLeft: medication.refillsLeft === "Not listed" ? "" : medication.refillsLeft || "",
+      prescriptionExpires: medication.prescriptionExpiresRaw || "",
       reminderDelayMinutes: String(medication.reminderDelayMinutes || 30),
     });
     window.requestAnimationFrame(() => {
       document.querySelector("#form-title")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
-  }
-
-  function fillSampleMedication() {
-    setNewMedication({
-      name: "Metformin",
-      purpose: "blood sugar",
-      dosage: "500 mg",
-      frequency: "Twice daily",
-      times: "8:00 AM, 6:00 PM",
-      instructions: "take with food",
-      sideEffects: "nausea, upset stomach",
-    });
-    setOcrStatus("Sample label filled. Please review the fields before saving.");
   }
 
   async function readBottleLabel(event) {
@@ -257,7 +247,7 @@ function MedicationsPage() {
       );
     } catch (error) {
       setOcrStatus(
-        error.message ||
+        error?.message ||
           "OCR could not read this photo. Try a brighter, closer JPG or PNG picture."
       );
     }
@@ -363,6 +353,12 @@ function MedicationsPage() {
       instructions:
         currentMedication.instructions ||
         trackFilledField("instructions", extractedMedication.instructions),
+      refillsLeft:
+        currentMedication.refillsLeft ||
+        trackFilledField("refills left", extractedMedication.refillsLeft),
+      prescriptionExpires:
+        currentMedication.prescriptionExpires ||
+        trackFilledField("prescription expires", extractedMedication.prescriptionExpires),
     }));
 
     return filledFields;
@@ -400,9 +396,14 @@ function MedicationsPage() {
             <Link to="/tasks">Settings</Link>
           </nav>
         </div>
-        <button className="secondary-button-print-schedule" type="button" onClick={() => window.print()}>
-          Print schedule
-        </button>
+        <div className="header-actions">
+          <button className="secondary-button-print-schedule" type="button" onClick={() => window.print()}>
+            Print schedule
+          </button>
+          <button className="secondary-button-print-schedule" type="button" onClick={() => navigate("/medication-history")}>
+            Medication history
+          </button>
+        </div>
         <button onClick={handleLogout} className="logout-button" type="button">
           Log Out
         </button>
@@ -421,9 +422,11 @@ function MedicationsPage() {
               </p>
             </div>
             <div className="alert-actions">
-              <button className="alert-button" type="button" onClick={handleEnableSound}>
-                {soundBlocked ? "Enable sound" : "Ring again"}
-              </button>
+              {soundBlocked && (
+                <button className="alert-button" type="button" onClick={handleEnableSound}>
+                  Enable sound
+                </button>
+              )}
               <button className="alert-button secondary-alert-button" type="button" onClick={stopMedicineAlarm}>
                 Stop sound
               </button>
@@ -484,7 +487,7 @@ function MedicationsPage() {
               aria-pressed={entryMode === "photo"}
               onClick={() => setEntryMode("photo")}
             >
-              Use bottle photo
+              Take picture of label
             </button>
           </div>
 
@@ -541,9 +544,6 @@ function MedicationsPage() {
               <p role="status" aria-live="polite">
                 {ocrStatus}
               </p>
-              <button className="secondary-button" type="button" onClick={fillSampleMedication}>
-                Fill sample from label
-              </button>
             </div>
           )}
 
@@ -640,6 +640,31 @@ function MedicationsPage() {
                   <option value="60">1 hour</option>
                 </select>
               </label>
+
+              <label htmlFor="refillsLeft">
+                <span>Refills left</span>
+                <input
+                  id="refillsLeft"
+                  name="refillsLeft"
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  placeholder="Example: 2"
+                  value={newMedication.refillsLeft}
+                  onChange={handleChange}
+                />
+              </label>
+
+              <label htmlFor="prescriptionExpires">
+                <span>Prescription expires</span>
+                <input
+                  id="prescriptionExpires"
+                  name="prescriptionExpires"
+                  type="date"
+                  value={newMedication.prescriptionExpires}
+                  onChange={handleChange}
+                />
+              </label>
             </div>
 
             <label className="full-width" htmlFor="sideEffects">
@@ -677,7 +702,7 @@ function MedicationsPage() {
           </form>
         </section>
 
-        <section className="schedule-panel" aria-labelledby="schedule-title">
+        <section id="medication-history" className="schedule-panel" aria-labelledby="schedule-title">
           <div className="section-heading">
             <h2 id="schedule-title">Today's schedule</h2>
             <p>
@@ -703,14 +728,10 @@ function MedicationsPage() {
                     <div>
                       <h3>{medication.name}</h3>
                       <p className="med-purpose">For: {medication.purpose}</p>
-                      {shouldShowLastTaken(medication) && (
-                        <p className="last-taken-message">
-                          Last taken today at {medication.lastTakenAt}
-                        </p>
-                      )}
                       {isMedicationDue(medication, currentTime) && (
                         <p className="due-label">Due now</p>
                       )}
+                      <MedicationWarnings medication={medication} />
                     </div>
                     <div className="card-actions">
                       <button
@@ -756,18 +777,23 @@ function MedicationsPage() {
                       <dt>Reminder</dt>
                       <dd>Remind again after {formatMinutesLabel(medication.reminderDelayMinutes || 30)}</dd>
                     </div>
+                    <div>
+                      <dt>Refills left</dt>
+                      <dd>{medication.refillsLeft || "Not listed"}</dd>
+                    </div>
+                    <div>
+                      <dt>Prescription expires</dt>
+                      <dd>{medication.prescriptionExpires || "Not listed"}</dd>
+                    </div>
                   </dl>
                   <div className="history-box">
                     <h4>Medication history</h4>
-                    {medication.takenHistory?.length ? (
-                      <ul>
-                        {medication.takenHistory.map((entry) => (
-                          <li key={entry.timestamp || `${entry.date}-${entry.time}`}>
-                            Taken on {formatHistoryDate(entry.date)} at {entry.time}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
+                    {hasLastTakenTime(medication) && (
+                      <p className="latest-history">
+                        Last taken {formatHistoryDate(medication.confirmedDate)} at {medication.lastTakenAt}
+                      </p>
+                    )}
+                    {!hasLastTakenTime(medication) && (
                       <p>No taken history yet.</p>
                     )}
                   </div>
@@ -790,8 +816,69 @@ function normalizeMedication(medication) {
     times: clean(medication.times) || "Not listed",
     instructions: clean(medication.instructions) || "Not listed",
     sideEffects: clean(medication.sideEffects) || "Not listed",
+    refillsLeft: clean(medication.refillsLeft) || "Not listed",
+    prescriptionExpires: formatDate(medication.prescriptionExpires) || "Not listed",
+    prescriptionExpiresRaw: clean(medication.prescriptionExpires),
     reminderDelayMinutes: Number(medication.reminderDelayMinutes) || 30,
   };
+}
+
+function MedicationWarnings({ medication }) {
+  const warnings = getMedicationWarnings(medication);
+
+  if (warnings.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="warning-list" aria-label={`Warnings for ${medication.name}`}>
+      {warnings.map((warning) => (
+        <p className="med-warning" key={warning}>
+          {warning}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function getMedicationWarnings(medication) {
+  const warnings = [];
+
+  if (shouldWarnRefillSoon(medication.refillsLeft)) {
+    warnings.push("Refill soon");
+  }
+
+  if (shouldWarnPrescriptionExpiresSoon(medication.prescriptionExpiresRaw)) {
+    warnings.push("Prescription expires soon");
+  }
+
+  return warnings;
+}
+
+function shouldWarnRefillSoon(refillsLeft) {
+  const refillNumber = Number(refillsLeft);
+
+  return Number.isFinite(refillNumber) && refillNumber <= 1;
+}
+
+function shouldWarnPrescriptionExpiresSoon(rawDate) {
+  if (!rawDate) {
+    return false;
+  }
+
+  const expirationDate = new Date(`${rawDate}T12:00:00`);
+
+  if (Number.isNaN(expirationDate.getTime())) {
+    return false;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  expirationDate.setHours(0, 0, 0, 0);
+
+  const daysUntilExpiration = (expirationDate - today) / (1000 * 60 * 60 * 24);
+
+  return daysUntilExpiration >= 0 && daysUntilExpiration <= 30;
 }
 
 async function prepareImageForOcr(file) {
@@ -858,6 +945,8 @@ function extractMedicationFromLabel(text, lines) {
   const instructionLine = findInstructionLine(lines);
   const frequency = extractFrequency(text);
   const times = extractTimes(text);
+  const refillsLeft = extractRefillsLeft(text, lines);
+  const prescriptionExpires = extractExpirationDate(text, lines);
 
   return {
     name: extractMedicationName(lines, dosageMatch?.[0]),
@@ -865,6 +954,8 @@ function extractMedicationFromLabel(text, lines) {
     frequency,
     times,
     instructions: instructionLine,
+    refillsLeft,
+    prescriptionExpires,
   };
 }
 
@@ -952,8 +1043,113 @@ function extractTimes(text) {
   return dayParts.join(", ");
 }
 
+function extractRefillsLeft(text, lines) {
+  const refillLine = lines.find((line) => /\b(refill|refills|rf)\b/i.test(line));
+  const sources = [refillLine, text].filter(Boolean);
+
+  for (const source of sources) {
+    const refillsLeftMatch = source.match(/\b(?:refills?|rf)\s*(?:left|remaining)?\D{0,10}(\d{1,2})\b/i);
+
+    if (refillsLeftMatch) {
+      return refillsLeftMatch[1];
+    }
+
+    const numberBeforeRefillsMatch = source.match(/\b(\d{1,2})\s*(?:refills?|rf)\s*(?:left|remaining)?\b/i);
+
+    if (numberBeforeRefillsMatch) {
+      return numberBeforeRefillsMatch[1];
+    }
+
+    if (/\bno refills?\b/i.test(source)) {
+      return "0";
+    }
+  }
+
+  return "";
+}
+
+function extractExpirationDate(text, lines) {
+  const expirationLine = lines.find((line) =>
+    /\b(exp|expires|expiration|discard|discard after|use by)\b/i.test(line)
+  );
+  const dateText = expirationLine || text;
+  const dateMatch =
+    dateText.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b/) ||
+    dateText.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{2,4})\b/i);
+
+  if (!dateMatch) {
+    return "";
+  }
+
+  if (Number.isNaN(Number(dateMatch[1]))) {
+    return formatMonthNameDate(dateMatch);
+  }
+
+  return formatNumberDate(dateMatch);
+}
+
+function formatNumberDate(match) {
+  const month = Number(match[1]);
+  const day = Number(match[2]);
+  const year = normalizeYear(match[3]);
+
+  if (!isValidDateParts(year, month, day)) {
+    return "";
+  }
+
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function formatMonthNameDate(match) {
+  const months = {
+    jan: 1,
+    feb: 2,
+    mar: 3,
+    apr: 4,
+    may: 5,
+    jun: 6,
+    jul: 7,
+    aug: 8,
+    sep: 9,
+    sept: 9,
+    oct: 10,
+    nov: 11,
+    dec: 12,
+  };
+  const month = months[match[1].slice(0, 3).toLowerCase()];
+  const day = Number(match[2]);
+  const year = normalizeYear(match[3]);
+
+  if (!isValidDateParts(year, month, day)) {
+    return "";
+  }
+
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function normalizeYear(value) {
+  const year = Number(value);
+  return year < 100 ? 2000 + year : year;
+}
+
+function isValidDateParts(year, month, day) {
+  return year >= 2000 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31;
+}
+
 function clean(value) {
   return String(value || "").trim();
+}
+
+function formatDate(value) {
+  if (!value) {
+    return "";
+  }
+
+  return new Date(`${value}T12:00:00`).toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function loadMedications() {
@@ -973,22 +1169,17 @@ function isMedicationDue(medication, now = new Date()) {
     return false;
   }
 
-  return Boolean(getMedicationTiming(medication.times, now).dueDose);
+  const timing = getMedicationTiming(medication.times, now);
+
+  if (!timing.dueDose) {
+    return false;
+  }
+
+  return !wasMedicationCreatedAfterDose(medication, timing.dueDose.date);
 }
 
-function shouldShowLastTaken(medication) {
-  return Boolean(
-    medication.lastTakenAt &&
-      medication.confirmedDate === getTodayKey() &&
-      hasMultipleDailyDoses(medication)
-  );
-}
-
-function hasMultipleDailyDoses(medication) {
-  return (
-    parseMedicationTimes(medication.times).length > 1 ||
-    /twice|three times|multiple/i.test(medication.frequency || "")
-  );
+function hasLastTakenTime(medication) {
+  return Boolean(medication.lastTakenAt && medication.confirmedDate);
 }
 
 function getMedicationTiming(times, now = new Date()) {
@@ -1022,6 +1213,20 @@ function getMedicationTiming(times, now = new Date()) {
     nextDose,
     displayDose: dueDose || nextDose || todayDoses[todayDoses.length - 1],
   };
+}
+
+function wasMedicationCreatedAfterDose(medication, doseDate) {
+  if (!medication.createdAt || !doseDate) {
+    return false;
+  }
+
+  const createdAt = new Date(medication.createdAt);
+
+  if (Number.isNaN(createdAt.getTime())) {
+    return false;
+  }
+
+  return getTodayKey(createdAt) === getTodayKey(doseDate) && createdAt > doseDate;
 }
 
 function parseMedicationTimes(times) {

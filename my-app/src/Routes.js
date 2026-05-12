@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import LoginPage from "./pages/LoginPage";
 import Homepage from "./Homepage";
 import MedicationsPage from './pages/MedicationsPage';
+import MedicationHistoryPage from './pages/MedicationHistoryPage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import SettingsPage from './pages/SettingsPage';
 import { applyAccessibilitySettings } from "./accessibilitySettings";
@@ -17,6 +18,7 @@ export default function AppRoutes() {
       <Route path="/" element={<LoginPage />} />
       <Route path="/home" element={<Homepage />} />
       <Route path="/medications" element={<MedicationsPage />} />
+      <Route path="/medication-history" element={<MedicationHistoryPage />} />
       <Route path="/appointments" element={<AppointmentsPage />} />
       <Route path="/tasks" element={<SettingsPage />} />
     </Routes>
