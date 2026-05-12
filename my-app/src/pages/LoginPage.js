@@ -47,9 +47,7 @@ function LoginPage() {
           <button type="submit">Log In</button>
         </form>
 
-        <p className="accessibility-note">
-          Designed to make daily tracking simple, clear, and accessible.
-        </p>
+    
       </div>
     </div>
   );
