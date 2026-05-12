@@ -1,23 +1,29 @@
 import ReminderCard from './ReminderCard';
 
-function TaskReminders({ tasks, onConfirm }) {
+function TaskReminders({ tasks, onConfirm, onDeleteAppointment }) {
   return (
-    <section className="app-section" aria-labelledby="task-heading">
+    <section className="app-section daily-checklist-section" aria-labelledby="task-heading">
       <div className="section-heading">
-        <p>Tasks</p>
+        <p>Today</p>
         <h2 id="task-heading">Daily checklist</h2>
       </div>
 
       <div className="reminder-list">
         {tasks.map((task) => (
           <ReminderCard
-            key={task.id}
+            key={`${task.category}-${task.id}`}
             title={task.title}
             time={task.time}
             details={task.details}
-            type="Task reminder"
+            type={task.type}
             isConfirmed={task.confirmed}
-            onConfirm={() => onConfirm(task.id)}
+            onConfirm={() => onConfirm(task.category, task.id)}
+            onDelete={
+              task.category === 'appointments'
+                ? () => onDeleteAppointment(task.id)
+                : undefined
+            }
+            alwaysShowDelete={task.category === 'appointments'}
           />
         ))}
       </div>

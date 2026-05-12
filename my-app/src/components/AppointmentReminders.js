@@ -1,8 +1,8 @@
 import ReminderCard from './ReminderCard';
 
-function AppointmentReminders({ appointments, onConfirm }) {
+function AppointmentReminders({ appointments, onConfirm, onDelete }) {
   return (
-    <section className="app-section" aria-labelledby="appointment-heading">
+    <section className="app-section appointment-reminders-section" aria-labelledby="appointment-heading">
       <div className="section-heading">
         <p>Appointments</p>
         <h2 id="appointment-heading">Upcoming visits</h2>
@@ -18,6 +18,8 @@ function AppointmentReminders({ appointments, onConfirm }) {
             type="Appointment reminder"
             isConfirmed={appointment.confirmed}
             onConfirm={() => onConfirm(appointment.id)}
+            onDelete={() => onDelete(appointment.id)}
+            alwaysShowDelete
           />
         ))}
       </div>
