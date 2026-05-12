@@ -5,7 +5,7 @@ import AppointmentReminders from './components/AppointmentReminders';
 import MedicationReminders from './components/MedicationReminders';
 import TaskReminders from './components/TaskReminders';
 import { Link } from 'react-router-dom';
-
+import { useNavigate } from 'react-router-dom';
 
 
 const initialReminders = {
@@ -31,6 +31,8 @@ const emptyReminder = {
 
 
 function Homepage() {
+  const navigate = useNavigate();
+  const username = localStorage.getItem("username");
   const [reminders, setReminders] = useState(initialReminders);
   const [newReminder, setNewReminder] = useState(emptyReminder);
 
@@ -47,6 +49,10 @@ function Homepage() {
   const totalCount =
     reminders.medications.length + reminders.appointments.length + reminders.tasks.length;
 
+    function handleLogout() {
+  localStorage.removeItem("username");
+  navigate("/");
+}
   function handleConfirm(category, reminderId) {
     setReminders((currentReminders) => ({
       ...currentReminders,
@@ -117,10 +123,11 @@ function Homepage() {
         <div className="hero-top">
         <div>
           <h1 className="eyebrow">
-            <Link to="/" className="title-link">
+            <Link to="/home" className="title-link">
               Everyday Tracker
             </Link>
           </h1>
+          <h2>Welcome, {username}!</h2>
           
         </div>
 
@@ -131,10 +138,13 @@ function Homepage() {
       </div>
 
   <nav className="hero-nav">
-    <Link to="/" className="nav-tab active">Home</Link>
+    <Link to="/home" className="nav-tab active">Home</Link>
     <Link to="/medications" className="nav-tab">Medications</Link>
     <Link to="/appointments" className="nav-tab">Appointments</Link>
     <Link to="/tasks" className="nav-tab">Tasks</Link>
+    <button onClick={handleLogout} className="logout-button">
+  Log Out
+</button>
   </nav>
 </header>
 
