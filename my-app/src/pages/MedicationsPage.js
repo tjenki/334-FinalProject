@@ -150,7 +150,7 @@ function MedicationsPage() {
           <h1>Medication Schedule</h1>
         
           <nav className="med-nav" aria-label="Main pages">
-            <Link to="/">Home</Link>
+            <Link to="/home">Home</Link>
             <Link to="/medications" aria-current="page">
               Medications
             </Link>
