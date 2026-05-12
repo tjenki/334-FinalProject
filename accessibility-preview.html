@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Accessibility Feature Preview</title>
+    <style>
+      :root {
+        --bg: #f5f7f2;
+        --surface: #ffffff;
+        --text: #17211b;
+        --muted: #4f6257;
+        --line: #c8d6cb;
+        --primary: #176b5b;
+        --primary-dark: #0f4f43;
+        --danger: #c35b36;
+        --danger-dark: #6b2614;
+        --focus: #083d77;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 18px;
+        line-height: 1.5;
+      }
+
+      button,
+      a {
+        font: inherit;
+      }
+
+      button:focus-visible,
+      a:focus-visible {
+        outline: 4px solid var(--focus);
+        outline-offset: 3px;
+      }
+
+      header {
+        background: #dfeadf;
+        border-bottom: 1px solid var(--line);
+        padding: 2rem clamp(1rem, 4vw, 3rem);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 0.35rem;
+        font-size: clamp(2rem, 5vw, 3.5rem);
+        line-height: 1.05;
+      }
+
+      .intro {
+        max-width: 55rem;
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 1.1rem;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(22rem, 0.85fr);
+        gap: 1.25rem;
+        padding: 1.25rem clamp(1rem, 4vw, 3rem) 3rem;
+      }
+
+      section {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: 0 12px 32px rgba(23, 33, 27, 0.12);
+        padding: 1.25rem;
+      }
+
+      .medicine-alert {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 1rem;
+        align-items: center;
+        background: #fff7e8;
+        border: 4px solid var(--danger);
+      }
+
+      .medicine-alert h2 {
+        color: var(--danger-dark);
+        font-size: 2.2rem;
+        line-height: 1.05;
+        margin-bottom: 0.35rem;
+      }
+
+      .badge {
+        display: inline-flex;
+        margin-bottom: 0.5rem;
+        padding: 0.35rem 0.55rem;
+        border-radius: 8px;
+        background: var(--danger);
+        color: #ffffff;
+        font-weight: 800;
+      }
+
+      .alert-actions,
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+
+      button {
+        min-height: 48px;
+        border: 2px solid var(--primary-dark);
+        border-radius: 8px;
+        background: var(--primary);
+        color: #ffffff;
+        cursor: pointer;
+        font-weight: 800;
+        padding: 0.75rem 1rem;
+      }
+
+      .secondary-button {
+        background: #e8efe9;
+        color: var(--text);
+        border-color: var(--line);
+      }
+
+      .danger-button {
+        background: var(--danger);
+        border-color: var(--danger);
+      }
+
+      .status-line {
+        margin: 0.75rem 0 0;
+        color: var(--muted);
+        font-weight: 800;
+      }
+
+      .missed-warning {
+        display: none;
+        margin-top: 1rem;
+        padding: 1rem;
+        border: 3px solid var(--danger);
+        border-radius: 8px;
+        background: #fff0e8;
+        color: var(--danger-dark);
+        font-weight: 800;
+      }
+
+      .missed-warning.is-visible {
+        display: block;
+      }
+
+      .timeline {
+        display: grid;
+        gap: 0.85rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .timeline li {
+        display: grid;
+        grid-template-columns: 7rem minmax(0, 1fr);
+        gap: 0.75rem;
+        padding: 0.85rem;
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .timeline time {
+        color: var(--primary-dark);
+        font-weight: 800;
+      }
+
+      .timeline strong {
+        display: block;
+      }
+
+      .card-list {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .preview-card {
+        border: 2px solid var(--line);
+        border-left: 8px solid var(--primary);
+        border-radius: 8px;
+        padding: 1rem;
+      }
+
+      .preview-card.is-warning {
+        border-left-color: var(--danger);
+        background: #fff7e8;
+      }
+
+      @media (max-width: 850px) {
+        main,
+        .medicine-alert {
+          grid-template-columns: 1fr;
+        }
+
+        .timeline li {
+          grid-template-columns: 1fr;
+        }
+
+        button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Medicine and Appointment Preview</h1>
+      <p class="intro">This is only a preview page. It shows possible accessibility upgrades before changing the real app.</p>
+    </header>
+
+    <main>
+      <section class="medicine-alert" aria-live="assertive" aria-labelledby="alert-title">
+        <div>
+          <span class="badge">Medicine due now</span>
+          <h2 id="alert-title">Time to take Metformin</h2>
+          <p>500 mg with food. This alert stays until the user confirms, snoozes, or gets help.</p>
+          <p id="lastTaken" class="status-line">Last taken: Not recorded today</p>
+          <div id="missedWarning" class="missed-warning">
+            This medicine may have been missed. Please check before taking another dose.
+          </div>
+        </div>
+
+        <div class="alert-actions">
+          <button type="button" onclick="markTaken()">I took it</button>
+          <button class="secondary-button" type="button" onclick="snooze(5)">Snooze 5 min</button>
+          <button class="secondary-button" type="button" onclick="snooze(10)">Snooze 10 min</button>
+          <button class="danger-button" type="button" onclick="readAlert()">Read aloud</button>
+        </div>
+      </section>
+
+      <section aria-labelledby="timeline-title">
+        <h2 id="timeline-title">Today timeline</h2>
+        <ul class="timeline">
+          <li>
+            <time>8:00 AM</time>
+            <div>
+              <strong>Take Metformin</strong>
+              <span>500 mg with food</span>
+            </div>
+          </li>
+          <li>
+            <time>10:30 AM</time>
+            <div>
+              <strong>Doctor appointment</strong>
+              <span>Main Street Clinic. Bring medication list.</span>
+            </div>
+          </li>
+          <li>
+            <time>6:00 PM</time>
+            <div>
+              <strong>Take Metformin</strong>
+              <span>Second dose with dinner</span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="cards-title">
+        <h2 id="cards-title">Reminder cards</h2>
+        <div class="card-list">
+          <article class="preview-card is-warning">
+            <h3>Metformin</h3>
+            <p class="status-line">Due now. Not confirmed yet.</p>
+            <div class="button-row">
+              <button type="button" onclick="markTaken()">I took it</button>
+              <button class="secondary-button" type="button" onclick="snooze(10)">Snooze</button>
+            </div>
+          </article>
+
+          <article class="preview-card">
+            <h3>Dr. Smith appointment</h3>
+            <p>10:30 AM at Main Street Clinic</p>
+            <div class="button-row">
+              <button type="button">Confirm done</button>
+              <button class="secondary-button" type="button">Delete appointment</button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      let missedTimer = window.setTimeout(() => {
+        document.getElementById("missedWarning").classList.add("is-visible");
+      }, 8000);
+
+      function markTaken() {
+        window.clearTimeout(missedTimer);
+        const now = new Date().toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        });
+        document.getElementById("lastTaken").textContent = `Last taken: Today at ${now}`;
+        document.getElementById("missedWarning").classList.remove("is-visible");
+        speak("Medicine confirmed. Last taken today at " + now);
+      }
+
+      function snooze(minutes) {
+        window.clearTimeout(missedTimer);
+        document.getElementById("lastTaken").textContent = `Snoozed for ${minutes} minutes`;
+        document.getElementById("missedWarning").classList.remove("is-visible");
+        speak(`Medicine reminder snoozed for ${minutes} minutes.`);
+      }
+
+      function readAlert() {
+        speak("Time to take Metformin. Take 500 milligrams with food.");
+      }
+
+      function speak(message) {
+        if (!("speechSynthesis" in window)) {
+          return;
+        }
+
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(message));
+      }
+    </script>
+  </body>
+</html>
