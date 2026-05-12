@@ -202,7 +202,7 @@ function Homepage() {
         <div>
           <h1 className="eyebrow">
             <Link to="/home" className="title-link">
-              Everyday Tracker
+              Flow State
             </Link>
           </h1>
           <h2>Welcome, {username}!</h2>
